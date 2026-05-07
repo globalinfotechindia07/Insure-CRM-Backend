@@ -231,7 +231,8 @@ const brokerNameRouter = require("./Masters/BrokerName/BrokerName.route");
 const branchBrokerRouter = require("./Masters/BranchBroker/BranchBroker.route");
 const incotermsRouter = require("./Masters/Incoterms/Incoterms.route");
 const subCustomerGroupRouter = require("./Masters/SubCustomerGroup/SubCustomerGroup.route");
-
+// Add this line with your other imports
+const paymentRoutes = require("./Payment/payment.route");
 const router = express.Router();
 
 const defaultRoutes = [
@@ -973,6 +974,10 @@ const defaultRoutes = [
     path: "/task-manager",
     route: taskmanagementrouter,
   },
+  {
+  path: "/payment",
+  route: paymentRoutes,
+},
 ];
 
 defaultRoutes.forEach((route) => {
