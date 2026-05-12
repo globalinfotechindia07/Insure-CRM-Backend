@@ -233,6 +233,7 @@ const incotermsRouter = require("./Masters/Incoterms/Incoterms.route");
 const subCustomerGroupRouter = require("./Masters/SubCustomerGroup/SubCustomerGroup.route");
 // Add this line with your other imports
 const paymentRoutes = require("./Payment/payment.route");
+const emailRoutes = require("./emailRoutes");
 const router = express.Router();
 
 const defaultRoutes = [
@@ -846,7 +847,6 @@ const defaultRoutes = [
     path: "/insCompany",
     route: insCompanyRouter,
   },
-  ,
   {
     path: "/insDepartment",
     route: insDepartmentRouter,
@@ -977,6 +977,10 @@ const defaultRoutes = [
   {
   path: "/payment",
   route: paymentRoutes,
+},
+{
+  path: "/email",
+  route: emailRoutes,
 },
 ];
 

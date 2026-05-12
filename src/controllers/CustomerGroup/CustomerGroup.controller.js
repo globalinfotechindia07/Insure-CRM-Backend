@@ -58,7 +58,7 @@ const postCustomerGroup = async (req, res) => {
       state,
       createdBy,
       companyId,
-      contactPersons: contactPerson?.map((person) => ({
+      contactPerson: contactPerson?.map((person) => ({
         name: person?.name ?? "",
         department: person?.department ?? "",
         address: person?.address ?? "",
