@@ -36,7 +36,7 @@ const customerRegistrationRouter = require("./Customer/customerRegistration.rout
 
 //todo Customer Group
 const customerGroupRouter = require("./CustomerGroup/CustomerGroup.route");
-
+const customerRoutes = require("./customerRoutes");
 //todo: type of client
 const typeOfClientRouter = require("./Client/typofClient.route");
 
@@ -981,6 +981,10 @@ const defaultRoutes = [
 {
   path: "/email",
   route: emailRoutes,
+},
+{
+  path: "/customers",
+  route: customerRoutes,
 },
 ];
 

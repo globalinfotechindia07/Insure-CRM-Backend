@@ -1,12 +1,24 @@
 const CustomerRegistrationModel = require("../../models/Customer/CustomerRegistration.model");
-const { SuperAdminModel } = require("../../models/index");
-const { TypeOfClientModel } = require("../../models/index");
+const { SuperAdminModel, AdminModel, TypeOfClientModel } = require("../../models/index");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { AdminModel } = require("../../models/index");
 require("dotenv").config();
+
+// Helper function to generate unique customer ID
+const generateCustomerId = async () => {
+  const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
+  let nextId = "CUST001";
+  
+  if (lastCustomer && lastCustomer.customerId) {
+    const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
+    if (!isNaN(lastNum)) {
+      nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
+    }
+  }
+  return nextId;
+};
 
 // new customer registrations details
 const createCustomerRegistration = async (req, res) => {
@@ -34,86 +46,371 @@ const createCustomerRegistration = async (req, res) => {
     } = req.body;
 
     // 🔍 Basic validation for required fields
-    const requiredFields = [name, mobile, email];
+    const requiredFields = [
+      { field: name, name: "name" },
+      { field: mobile, name: "mobile" },
+      { field: email, name: "email" }
+    ];
 
-    if (requiredFields.some((field) => !field || field.trim() === "")) {
+    const missingFields = requiredFields.filter(item => !item.field || item.field.trim() === "");
+    
+    if (missingFields.length > 0) {
       return res.status(400).json({
-        message: "All required fields must be provided.",
+        success: false,
+        message: `Required fields missing: ${missingFields.map(f => f.name).join(", ")}`,
       });
+    }
+
+    // Check for duplicate mobile number
+    const existingMobile = await CustomerRegistrationModel.findOne({ mobile });
+    if (existingMobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer with this mobile number already exists",
+      });
+    }
+
+    // Check for duplicate email
+    const existingEmail = await CustomerRegistrationModel.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer with this email already exists",
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address",
+      });
+    }
+
+    // Validate mobile number (10 digits)
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobileRegex.test(mobile)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid 10-digit mobile number",
+      });
+    }
+
+    // Generate customer ID if not provided
+    let finalCustomerId = customerId;
+    if (!finalCustomerId) {
+      finalCustomerId = await generateCustomerId();
+    }
+
+    // Validate PAN card format if provided
+    if (panNo && panNo.trim() !== "") {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panNo.toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a valid PAN card number",
+        });
+      }
+    }
+
+    // Validate GST format if provided
+    if (gstNo && gstNo.trim() !== "") {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNo.toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a valid GST number",
+        });
+      }
     }
 
     // create newCustomerRegistration object
     const newCustomerRegistration = new CustomerRegistrationModel({
-      customerType: clientType,
-      customerId,
-      prefix,
-      name,
-      customerGroupName,
-      dob,
-      doj,
-      email,
-      mobile,
-      panNo,
-      aadharNo,
-      drivingLicenseNo,
-      gstNo,
-      address,
-      pincode,
-      city,
-      state,
+      customerType: clientType || "Individual",
+      customerId: finalCustomerId,
+      prefix: prefix || "",
+      name: name.trim(),
+      customerGroupName: customerGroupName || "",
+      dob: dob || null,
+      doj: doj || new Date(),
+      email: email.toLowerCase().trim(),
+      mobile: mobile.trim(),
+      panNo: panNo ? panNo.toUpperCase().trim() : "",
+      aadharNo: aadharNo || "",
+      drivingLicenseNo: drivingLicenseNo || "",
+      gstNo: gstNo ? gstNo.toUpperCase().trim() : "",
+      address: address || "",
+      pincode: pincode || "",
+      city: city || "",
+      state: state || "",
       contactPersons: contactPerson?.map((person) => ({
-        name: person?.name ?? "",
-        department: person?.department ?? "",
-        position: person?.position ?? "",
-        email: person?.email ?? "",
-        phone: person?.phone ?? "",
-      })),
+        name: person?.name?.trim() ?? "",
+        department: person?.department?.trim() ?? "",
+        position: person?.position?.trim() ?? "",
+        email: person?.email?.toLowerCase().trim() ?? "",
+        phone: person?.phone?.trim() ?? "",
+      })) || [],
     });
+    
     await newCustomerRegistration.save();
-    console.log("create dunction executed");
+    console.log("Customer registration created successfully");
 
     res.status(201).json({
+      success: true,
       message: "Customer registration created successfully",
       data: newCustomerRegistration,
     });
   } catch (error) {
-    console.error("Error fetching customer registrations:", error);
+    console.error("Error creating customer registration:", error);
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `Customer with this ${field} already exists`,
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: errors,
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while creating customer registration",
+      error: error.message,
+    });
   }
 };
 
 //get all customer registration details
 const getAllCustomerRegistration = async (req, res) => {
   try {
-    // console.log('Fetching CustomerRegistration data...');
-    const customerRegistration = await CustomerRegistrationModel.find();
-    // .populate(
-    //   "customerGroup",
-    //   "customerGroupName"
-    // );
-    //   .populate("contactPerson");
-
-    // console.log(
-    //   "------------------------------------------------",
-    //   customerRegistration
-    // );
-
-    if (!customerRegistration || customerRegistration.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Customer registration not found" });
+    // Add pagination support
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Add search functionality
+    const search = req.query.search || "";
+    let searchFilter = {};
+    
+    if (search) {
+      searchFilter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { mobile: { $regex: search, $options: "i" } },
+          { customerId: { $regex: search, $options: "i" } }
+        ]
+      };
     }
-
-    // sort data from newest to oldest
-    customerRegistration.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt) // b is newer, a is older
-    );
-
-    return res.status(200).json({ status: "true", data: customerRegistration });
+    
+    // Add filter by customer type
+    const customerType = req.query.customerType;
+    if (customerType) {
+      searchFilter.customerType = customerType;
+    }
+    
+    // Fetch customer registration data with pagination
+    const customerRegistration = await CustomerRegistrationModel.find(searchFilter)
+      .sort({ createdAt: -1 }) // sort from newest to oldest
+      .skip(skip)
+      .limit(limit);
+    
+    // Get total count for pagination
+    const totalCount = await CustomerRegistrationModel.countDocuments(searchFilter);
+    
+    if (!customerRegistration || customerRegistration.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No customer registrations found",
+        data: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0
+        }
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: "Customer registrations fetched successfully",
+      data: customerRegistration,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error("Error fetching customer registrations:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching customer registrations",
+      error: error.message
+    });
   }
 };
+
+// Get single customer registration by ID
+const getCustomerRegistrationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid customer ID format",
+      });
+    }
+    
+    const customerRegistration = await CustomerRegistrationModel.findById(id);
+    
+    if (!customerRegistration) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer registration not found",
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: "Customer registration fetched successfully",
+      data: customerRegistration,
+    });
+  } catch (error) {
+    console.error("Error fetching customer registration:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Update customer registration
+const updateCustomerRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid customer ID format",
+      });
+    }
+    
+    // Check if customer exists
+    const existingCustomer = await CustomerRegistrationModel.findById(id);
+    if (!existingCustomer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer registration not found",
+      });
+    }
+    
+    // Check for duplicate mobile (excluding current customer)
+    if (updateData.mobile && updateData.mobile !== existingCustomer.mobile) {
+      const duplicateMobile = await CustomerRegistrationModel.findOne({
+        mobile: updateData.mobile,
+        _id: { $ne: id }
+      });
+      if (duplicateMobile) {
+        return res.status(400).json({
+          success: false,
+          message: "Customer with this mobile number already exists",
+        });
+      }
+    }
+    
+    // Update contact persons if provided
+    if (updateData.contactPerson) {
+      updateData.contactPersons = updateData.contactPerson.map((person) => ({
+        name: person?.name?.trim() ?? "",
+        department: person?.department?.trim() ?? "",
+        position: person?.position?.trim() ?? "",
+        email: person?.email?.toLowerCase().trim() ?? "",
+        phone: person?.phone?.trim() ?? "",
+      }));
+      delete updateData.contactPerson;
+    }
+    
+    const updatedCustomer = await CustomerRegistrationModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+    
+    return res.status(200).json({
+      success: true,
+      message: "Customer registration updated successfully",
+      data: updatedCustomer,
+    });
+  } catch (error) {
+    console.error("Error updating customer registration:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Delete customer registration
+const deleteCustomerRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid customer ID format",
+      });
+    }
+    
+    const deletedCustomer = await CustomerRegistrationModel.findByIdAndDelete(id);
+    
+    if (!deletedCustomer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer registration not found",
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: "Customer registration deleted successfully",
+      data: deletedCustomer,
+    });
+  } catch (error) {
+    console.error("Error deleting customer registration:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCustomerRegistration,
   getAllCustomerRegistration,
+  getCustomerRegistrationById,
+  updateCustomerRegistration,
+  deleteCustomerRegistration,
 };
