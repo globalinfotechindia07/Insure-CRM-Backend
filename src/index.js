@@ -45,6 +45,7 @@ app.get("/", (req, res) => {
 
 app.use("/api", routes);
 
+
 const imagesPath = path.join(__dirname, "/public/images");
 app.use("/api/images", express.static(imagesPath));
 
