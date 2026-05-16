@@ -36,7 +36,7 @@ const customerRegistrationRouter = require("./Customer/customerRegistration.rout
 
 //todo Customer Group
 const customerGroupRouter = require("./CustomerGroup/CustomerGroup.route");
-
+const customerRoutes = require("./customerRoutes");
 //todo: type of client
 const typeOfClientRouter = require("./Client/typofClient.route");
 
@@ -233,7 +233,21 @@ const incotermsRouter = require("./Masters/Incoterms/Incoterms.route");
 const subCustomerGroupRouter = require("./Masters/SubCustomerGroup/SubCustomerGroup.route");
 // Add this line with your other imports
 const paymentRoutes = require("./Payment/payment.route");
+const emailRoutes = require("./emailRoutes");
 const router = express.Router();
+
+const surveyorRouter = require("../routes/surveyor.routes");
+
+const tpaRouter = require("../routes/tpa.routes");
+
+const investigatorRouter = require("../routes/investigator.route");
+
+const claimRouter = require("../routes/claim.routes");
+const policyRouter = require(
+  "../routes/policy.route"
+);
+
+
 
 const defaultRoutes = [
   // superAdmin
@@ -846,7 +860,6 @@ const defaultRoutes = [
     path: "/insCompany",
     route: insCompanyRouter,
   },
-  ,
   {
     path: "/insDepartment",
     route: insDepartmentRouter,
@@ -977,6 +990,37 @@ const defaultRoutes = [
   {
   path: "/payment",
   route: paymentRoutes,
+},
+{
+  path: "/email",
+  route: emailRoutes,
+},
+{
+  path: "/customers",
+  route: customerRoutes,
+},
+{
+  path: "/surveyor",
+  route: surveyorRouter,
+},
+
+{
+  path: "/tpa",
+  route: tpaRouter,
+},
+
+{
+  path: "/investigator",
+  route: investigatorRouter,
+},
+
+{
+  path: "/claim",
+  route: claimRouter,
+},
+{
+  path: "/policy",
+  route: policyRouter,
 },
 ];
 
