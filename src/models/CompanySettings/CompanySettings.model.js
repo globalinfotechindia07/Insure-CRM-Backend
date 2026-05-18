@@ -1,35 +1,41 @@
 const mongoose = require('mongoose');
 
 const locationSchema = new mongoose.Schema({
-  address: { type: String  },
-  pincode: { type: String  },
-  country: { type: String  },
-  state: { type: String  },
+  address: { type: String },
+  pincode: { type: String },
+  country: { type: String },
+  state: { type: String },
   city: { type: String },
 });
 
 const locationSchemaExp = new mongoose.Schema({
-  address: { type: String  },
-  pincode: { type: String  },
+  address: { type: String },
+  pincode: { type: String },
   country: { type: String },
-  state: { type: String  },
+  state: { type: String },
   city: { type: String },
-  gstNo: { type: String   }
+  gstNo: { type: String }
 });
 
 const companySettingsSchema = new mongoose.Schema({
-  companyName: { type: String, required: true },
-  email: { type: String, required: true },
-  mobileNumber: { type: String, required: true },
+  companyName: { type: String },
+  email: { type: String },
+  mobileNumber: { type: String },
   alternateMobileNumber: { type: String },
   websiteLink: { type: String },
-  gstNo: { type: String, required: true },
-  address: { type: String, required: true },
-  pincode: { type: String, required: true },
-  country: { type: String, required: true },
-  state: { type: String, required: true },
-  city: { type: String, required: true },
-  companyLogo: { type: String  },
+  gstNo: { type: String },
+  address: { type: String },
+  pincode: { type: String },
+  country: { type: String },
+  state: { type: String },
+  city: { type: String },
+  companyLogo: { type: String },
+  
+  // ✅ FIXED: Changed from ObjectId to String
+  refId: { 
+    type: String,  // Changed from mongoose.Schema.Types.ObjectId
+    ref: 'clientRegistration'
+  },
 
   locations: {
     exportCenter: [locationSchemaExp],
@@ -40,6 +46,5 @@ const companySettingsSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const companySettingsModel = mongoose.model('companySettings', companySettingsSchema);
-
 
 module.exports = companySettingsModel;

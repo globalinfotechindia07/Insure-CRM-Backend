@@ -20,6 +20,8 @@ const allowedOrigins = [
   "http://miraicrm.com",
 ];
 
+
+
 app.use("/api/uploads", express.static("public/images"));
 
 app.use(
