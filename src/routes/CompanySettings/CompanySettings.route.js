@@ -17,6 +17,13 @@ companySettingsRouter.get(
   CompanySettingsController.getCompanySettingsByIdController
 );
 
+// ✅ NEW: Get company settings by refId
+companySettingsRouter.get(
+  "/ref/:refId",
+  handleToken,
+  CompanySettingsController.getCompanySettingsByRefId
+);
+
 companySettingsRouter.get(
   "/:id/logo",
   handleToken,
@@ -46,7 +53,7 @@ companySettingsRouter.delete(
   CompanySettingsController.deleteCompanySettingsController
 );
 
-// ✅ ADD THIS - Separate logo upload endpoint
+// Separate logo upload endpoint
 companySettingsRouter.post(
   "/:id/logo",
   handleToken,

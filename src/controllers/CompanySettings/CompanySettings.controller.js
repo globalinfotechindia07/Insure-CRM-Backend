@@ -37,6 +37,31 @@ const getCompanySettingsByIdController = async (req, res) => {
   }
 };
 
+// ✅ NEW: Get company settings by refId
+const getCompanySettingsByRefId = async (req, res) => {
+  try {
+    const { refId } = req.params;
+    console.log("🔍 Fetching company settings for refId:", refId);
+    
+    const companySettings = await companySettingsModel.findOne({ refId: refId });
+    
+    if (!companySettings) {
+      return res.status(404).json({ 
+        status: "false", 
+        message: "Company settings not found for this refId" 
+      });
+    }
+    
+    res.status(200).json({ status: "true", data: companySettings });
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({
+      status: "false",
+      message: ["Error fetching company settings by refId", error.message],
+    });
+  }
+};
+
 const postCompanySettingsController = async (req, res) => {
   try {
     console.log("📦 Request Body:", req.body);
@@ -221,7 +246,7 @@ const getCompanyLogoController = async (req, res) => {
   }
 };
 
-// ✅ NEW: Separate logo upload endpoint
+// Separate logo upload endpoint
 const uploadCompanyLogoController = async (req, res) => {
   try {
     const { id } = req.params;
@@ -278,9 +303,10 @@ const uploadCompanyLogoController = async (req, res) => {
 module.exports = {
   getCompanySettingsController,
   getCompanySettingsByIdController,
+  getCompanySettingsByRefId,  // ✅ Added this
   postCompanySettingsController,
   putCompanySettingsController,
   deleteCompanySettingsController,
   getCompanyLogoController,
-  uploadCompanyLogoController, // ✅ Added this
+  uploadCompanyLogoController,
 };

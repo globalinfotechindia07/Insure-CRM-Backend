@@ -21,8 +21,9 @@ const allowedOrigins = [
 ];
 
 
-
-app.use("/api/uploads", express.static("public/images"));
+// Add this line - very important!
+// ✅ Add this line - Static file serving for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));app.use("/api/uploads", express.static("public/images"));
 
 app.use(
   cors({

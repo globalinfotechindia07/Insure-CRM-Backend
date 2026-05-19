@@ -18,23 +18,30 @@ const locationSchemaExp = new mongoose.Schema({
 });
 
 const companySettingsSchema = new mongoose.Schema({
-  companyName: { type: String },
-  email: { type: String },
-  mobileNumber: { type: String },
-  alternateMobileNumber: { type: String },
-  websiteLink: { type: String },
-  gstNo: { type: String },
-  address: { type: String },
-  pincode: { type: String },
-  country: { type: String },
-  state: { type: String },
-  city: { type: String },
-  companyLogo: { type: String },
+  companyName: { type: String, trim: true },
+  email: { type: String, lowercase: true, trim: true },
+  mobileNumber: { type: String, trim: true },
+  alternateMobileNumber: { type: String, trim: true },
+  websiteLink: { type: String, trim: true },
+  gstNo: { type: String, uppercase: true, trim: true },
+  address: { type: String, trim: true },
+  pincode: { type: String, trim: true },
+  country: { type: String, trim: true },
+  state: { type: String, trim: true },
+  city: { type: String, trim: true },
   
-  // ✅ FIXED: Changed from ObjectId to String
+  // ✅ Store logo path as string (relative path)
+  companyLogo: { 
+    type: String,
+    default: null,
+    trim: true
+  },
+  
+  // ✅ refId as String (not ObjectId)
   refId: { 
-    type: String,  // Changed from mongoose.Schema.Types.ObjectId
-    ref: 'clientRegistration'
+    type: String,
+    ref: 'clientRegistration',
+    index: true  // ✅ Add index for faster queries
   },
 
   locations: {
@@ -43,7 +50,19 @@ const companySettingsSchema = new mongoose.Schema({
     warehouse: [locationSchema],
     branches: [locationSchema]
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// ✅ Virtual field for full logo URL
+companySettingsSchema.virtual('logoUrl').get(function() {
+  if (!this.companyLogo) return null;
+  if (this.companyLogo.startsWith('http')) return this.companyLogo;
+  if (this.companyLogo.startsWith('/uploads')) return this.companyLogo;
+  return `/uploads/company-logo/${this.companyLogo}`;
+});
 
 const companySettingsModel = mongoose.model('companySettings', companySettingsSchema);
 
