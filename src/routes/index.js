@@ -99,6 +99,9 @@ const findingOptionRouter = require("./OPD/Examination/opthalmology/findingOptio
 const dilatedOptionRouter = require("./OPD/Examination/opthalmology/arUndilated");
 const unDilatedOptionRouter = require("./OPD/Examination/opthalmology/arDilated");
 
+
+const departmentsRouter = require("../routes/departmentRoutes");
+
 const medicinesMasterRouter = require("./Masters/medicines.route");
 const unitMasterRoute = require("./Masters/Pathology_Master/unitMaster.route");
 const unitRadiologyMasterRoute = require("./Masters/Radiology_Master/unitRadiology.route");
@@ -415,6 +418,10 @@ const defaultRoutes = [
   {
     path: "/superSpecialization",
     route: superSpecialization,
+  },
+    {
+    path: "/department",
+    route: departmentsRouter,  // Using new department module
   },
 
   {
