@@ -34,6 +34,8 @@ const policySchema = new mongoose.Schema(
 
     insurerName: String,
 
+    insuranceCompany: String,  // ✅ ADDED - Insurance Company Name
+
     vehicleNumber: String,
 
     premium: Number,

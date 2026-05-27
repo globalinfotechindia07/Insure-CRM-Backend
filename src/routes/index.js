@@ -183,6 +183,13 @@ const EmergencyPatientFollowUpRoutes = require("./Emergency/Patient/emergency_pa
 const departmentTypeRouter = require("./departmentType.route");
 const departmentSubTypeRouter = require("./departmentSubType.route");
 
+
+
+// Add this line with your other imports (around line 200-250)
+const renewalReminderRouter = require("../routes/renewalReminder.routes");
+
+const companysRouter = require("../routes/companyRoutes");
+
 const TypeRouter = require("./Masters/medicine/typeRoutes");
 const genericRoutes = require("./Masters/medicine/genericRoute");
 const routeRoute = require("./Masters/medicine/routeRoutes");
@@ -1029,6 +1036,14 @@ const defaultRoutes = [
   path: "/policy",
   route: policyRouter,
 },
+  {
+    path: "/renewal-reminder",
+    route: renewalReminderRouter,
+  },
+    {
+    path: "/company",
+    route: companysRouter,
+  },
 ];
 
 defaultRoutes.forEach((route) => {
