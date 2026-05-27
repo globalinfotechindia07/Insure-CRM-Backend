@@ -8,17 +8,19 @@ const ProductOrServiceCategorySchema = new Schema(
       ref: "Admin",
       required: true,
     },
-    insDepartment: {
+    department: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "insDepartment",
+      ref: "Department",  // Changed from insDepartment to Department
       set: (v) => (v === "" ? null : v),
-      // required: true,
+      required: true,  // Make it required
     },
-    productName: { type: String, required: true },
+    productName: { 
+      type: String, 
+      required: true 
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
-      // required: true,
     },
   },
   {

@@ -1,14 +1,25 @@
 const express = require("express");
 const productMasterRouter = express.Router();
-const { productMasterController } = require("../../controllers");
-// const { validateProductMaster } = require("../../validations/Masters/productMasterValidation");
-const {handleToken} = require('../../utils/handleToken'); 
+const {
+  getProductOrServiceCategory,
+  postProductOrServiceCategory,
+  putProductOrServiceCategory,
+  deleteProductOrServiceCategory,
+} = require("../../controllers/Masters/ProductOrServiceCategory/ProductOrServiceCategory.controller");
+const { handleToken } = require('../../utils/handleToken');
 
-productMasterRouter.post("/",  handleToken, productMasterController.addProduct);
-productMasterRouter.post("/import",  handleToken, productMasterController.bulkImport);
-productMasterRouter.put("/:id", handleToken,  productMasterController.editProduct);
-productMasterRouter.get("/", handleToken, productMasterController.getAllProduct);
-productMasterRouter.get("/:id", handleToken, productMasterController.getSingleProduct);
-productMasterRouter.put("/delete/:id", handleToken, productMasterController.deleteProduct);
+// ================= PRODUCT/SERVICE CATEGORY ROUTES =================
+
+// Create new product category
+productMasterRouter.post("/", handleToken, postProductOrServiceCategory);
+
+// Get all product categories
+productMasterRouter.get("/", handleToken, getProductOrServiceCategory);
+
+// Update product category
+productMasterRouter.put("/:id", handleToken, putProductOrServiceCategory);
+
+// Delete product category
+productMasterRouter.delete("/:id", handleToken, deleteProductOrServiceCategory);
 
 module.exports = productMasterRouter;
