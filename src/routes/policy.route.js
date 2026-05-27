@@ -8,44 +8,19 @@ const {
   deletePolicy,
 } = require("../controllers/policy.controller");
 
-
 // ================= CREATE POLICY =================
-
-router.post(
-  "/",
-  createPolicy
-);
-
+router.post("/", createPolicy);
 
 // ================= GET ALL POLICIES =================
-
-router.get(
-  "/",
-  getPolicies
-);
-
+router.get("/", getPolicies);
 
 // ================= GET SINGLE POLICY =================
-
-router.get(
-  "/:id",
-  getSinglePolicy
-);
-
+router.get("/:id", getSinglePolicy);
 
 // ================= UPDATE POLICY =================
-
-router.put(
-  "/:id",
-  updatePolicy
-);
-
+router.put("/:id", updatePolicy);
 
 // ================= DELETE POLICY =================
-
-router.delete(
-  "/:id",
-  deletePolicy
-);
+router.delete("/:id", deletePolicy);
 
 module.exports = router;

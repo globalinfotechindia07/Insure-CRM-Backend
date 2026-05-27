@@ -75,88 +75,195 @@ const claimSchema = new mongoose.Schema(
     paymentMode: String,
 
     // =========================================
-    // CLAIM MAIN DETAILS
+    // CLAIM MAIN DETAILS (UPDATED)
     // =========================================
 
-    claimAmount: Number,
+    // Date of Loss / Admission
+    dateOfLossOrAdmission: {
+      type: Date,
+      required: false,
+    },
 
-    estimatedLossAmount: Number,
+    // Date of discharge
+    dateOfDischarge: {
+      type: Date,
+      required: false,
+    },
 
-    approvedAmount: Number,
+    // Estimated loss Amount
+    estimatedLossAmount: {
+      type: Number,
+      default: 0,
+    },
 
-    causeOfLoss: String,
+    // Cause of Loss
+    causeOfLoss: {
+      type: String,
+      trim: true,
+    },
 
-    machineryDetails: String,
+    // Claim Approved Amount
+    claimApprovedAmount: {
+      type: Number,
+      default: 0,
+    },
 
-    settlementType: String, // Standard / Non-Standard / Repudiate
+    machineryDetails: {
+      type: String,
+      trim: true,
+    },
+
+    // Type of settlement [Standard / Non-Standard / Repudiate]
+    settlementType: {
+      type: String,
+      enum: ["Standard", "Non-Standard", "Repudiate"],
+      default: "Standard",
+    },
 
     // =========================================
-    // IMPORTANT DATES
+    // IMPORTANT DATES (UPDATED)
     // =========================================
 
-    dateOfLoss: Date,
+    // Date of Approval of claim
+    dateOfApprovalOfClaim: {
+      type: Date,
+      required: false,
+    },
 
-    admissionDate: Date,
-
-    dischargeDate: Date,
-
-    approvalDate: Date,
-
-    settlementDate: Date,
+    // Date of settlement
+    dateOfSettlement: {
+      type: Date,
+      required: false,
+    },
 
     // =========================================
-    // SURVEYOR / TPA / INVESTIGATOR
+    // SURVEYOR / TPA / INVESTIGATOR (UPDATED)
     // =========================================
 
-    surveyorId: {
+    // Name of the preliminary/Spot Surveyor
+    preliminarySurveyorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Surveyor",
     },
 
+    preliminarySurveyorName: {
+      type: String,
+      trim: true,
+    },
+
+    // Name of the Final Surveyor
     finalSurveyorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Surveyor",
     },
 
+    finalSurveyorName: {
+      type: String,
+      trim: true,
+    },
+
+    // Name of the TPA
     tpaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TPA",
     },
 
+    tpaName: {
+      type: String,
+      trim: true,
+    },
+
+    // Name of the Investigator/Forensic Lab
     investigatorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Investigator",
     },
 
-    // =========================================
-    // TRANSPORT / MARINE DETAILS
-    // =========================================
-
-    invoiceNo: String,
-
-    billOfLadingNo: String,
-
-    lrNo: String,
-
-    insuranceCertificateNo: String,
-
-    journeyFrom: String,
-
-    journeyTo: String,
-
-    surveyorReferenceNumber: String,
+    investigatorName: {
+      type: String,
+      trim: true,
+    },
 
     // =========================================
-    // POST HOSPITALIZATION CLAIM (SEPARATE BLOCK)
+    // TRANSPORT / MARINE DETAILS (UPDATED)
+    // =========================================
+
+    // Invoice No.
+    invoiceNo: {
+      type: String,
+      trim: true,
+    },
+
+    // Bill of lading No.
+    billOfLadingNo: {
+      type: String,
+      trim: true,
+    },
+
+    // LR No.
+    lrNo: {
+      type: String,
+      trim: true,
+    },
+
+    // Insurance Certificate No.
+    insuranceCertificateNo: {
+      type: String,
+      trim: true,
+    },
+
+    // Journey/Voyage From
+    journeyFrom: {
+      type: String,
+      trim: true,
+    },
+
+    // Journey/Voyage To
+    journeyTo: {
+      type: String,
+      trim: true,
+    },
+
+    // Surveyor/Loss Adjuster Reference Number WKW
+    surveyorReferenceNumber: {
+      type: String,
+      trim: true,
+    },
+
+    // =========================================
+    // POST HOSPITALIZATION CLAIM (UPDATED)
     // =========================================
 
     postHospitalization: {
-      dischargeDate: Date,
+      // Date of Discharge
+      dischargeDate: {
+        type: Date,
+        required: false,
+      },
 
-      amountClaimed: Number,
+      // Amount Claimed
+      amountClaimed: {
+        type: Number,
+        default: 0,
+      },
 
-      noOfDays: Number,
+      // No of Days
+      noOfDays: {
+        type: Number,
+        default: 0,
+      },
     },
+
+    // =========================================
+    // ADDITIONAL FIELDS (for compatibility)
+    // =========================================
+
+    claimAmount: Number,
+    approvedAmount: Number,
+    admissionDate: Date,
+    dischargeDate: Date,
+    approvalDate: Date,
+    settlementDate: Date,
 
     // =========================================
     // ACTIVE STATUS

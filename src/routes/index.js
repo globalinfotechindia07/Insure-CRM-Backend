@@ -99,6 +99,9 @@ const findingOptionRouter = require("./OPD/Examination/opthalmology/findingOptio
 const dilatedOptionRouter = require("./OPD/Examination/opthalmology/arUndilated");
 const unDilatedOptionRouter = require("./OPD/Examination/opthalmology/arDilated");
 
+
+const departmentsRouter = require("../routes/departmentRoutes");
+
 const medicinesMasterRouter = require("./Masters/medicines.route");
 const unitMasterRoute = require("./Masters/Pathology_Master/unitMaster.route");
 const unitRadiologyMasterRoute = require("./Masters/Radiology_Master/unitRadiology.route");
@@ -179,6 +182,13 @@ const EmergencyPatientInstructionRoutes = require("./Emergency/Patient/emergency
 const EmergencyPatientFollowUpRoutes = require("./Emergency/Patient/emergency_patient_followUp.route");
 const departmentTypeRouter = require("./departmentType.route");
 const departmentSubTypeRouter = require("./departmentSubType.route");
+
+
+
+// Add this line with your other imports (around line 200-250)
+const renewalReminderRouter = require("../routes/renewalReminder.routes");
+
+const companysRouter = require("../routes/companyRoutes");
 
 const TypeRouter = require("./Masters/medicine/typeRoutes");
 const genericRoutes = require("./Masters/medicine/genericRoute");
@@ -415,6 +425,10 @@ const defaultRoutes = [
   {
     path: "/superSpecialization",
     route: superSpecialization,
+  },
+    {
+    path: "/department",
+    route: departmentsRouter,  // Using new department module
   },
 
   {
@@ -1022,6 +1036,14 @@ const defaultRoutes = [
   path: "/policy",
   route: policyRouter,
 },
+  {
+    path: "/renewal-reminder",
+    route: renewalReminderRouter,
+  },
+    {
+    path: "/company",
+    route: companysRouter,
+  },
 ];
 
 defaultRoutes.forEach((route) => {
