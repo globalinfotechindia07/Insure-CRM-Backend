@@ -4,7 +4,7 @@ const renewalReminderSchema = new mongoose.Schema(
   {
     policyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Policy",
+      ref: "policyDetail",
       required: true,
     },
     customerName: {

@@ -42,7 +42,8 @@ const postProductOrServiceCategory = async (req, res) => {
 
     // Populate the department data before sending response
     const populatedCategory = await ProductOrServiceCategorymodel.findById(newCategory._id)
-      .populate("department", "name");  // Populate department with name field
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName");  // Populate both fields
 
     res.status(201).json({
       status: true,
@@ -74,7 +75,8 @@ const getProductOrServiceCategory = async (req, res) => {
     const categories = await ProductOrServiceCategorymodel.find({
       companyId: new mongoose.Types.ObjectId(companyId),
     })
-      .populate("department", "name")  // Populate department with name field
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName")  // Populate both fields
       .sort({ createdAt: -1 });
 
     if (!categories || categories.length === 0) {
@@ -124,7 +126,9 @@ const putProductOrServiceCategory = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate("department", "name");
+    )
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName");
 
     console.log("Updated category:", updatedCategory);
 

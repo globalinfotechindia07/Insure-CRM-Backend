@@ -1,5 +1,5 @@
 const RenewalReminder = require("../models/renewalReminder.model");
-const Policy = require("../models/policy.model");
+const { policyDetailModel } = require("../models/index");
 
 // ================= CREATE REMINDER =================
 exports.createReminder = async (req, res) => {
@@ -7,7 +7,9 @@ exports.createReminder = async (req, res) => {
     const { policyId, reminderDays = 7 } = req.body;
 
     // Find policy details
-    const policy = await Policy.findById(policyId);
+    const policy = await policyDetailModel.findById(policyId)
+      .populate("retailCustomer")
+      .populate("customerGroup");
     if (!policy) {
       return res.status(404).json({
         success: false,
@@ -32,13 +34,21 @@ exports.createReminder = async (req, res) => {
       });
     }
 
+    let customerName = policy.cutomerName || "";
+    if (!customerName && policy.retailCustomer) {
+      customerName = policy.retailCustomer.name;
+    }
+    if (!customerName && policy.customerGroup) {
+      customerName = policy.customerGroup.groupName || policy.customerGroup.name;
+    }
+
     // Create reminder
     const reminder = await RenewalReminder.create({
       policyId: policyId,
-      customerName: policy.insuredName,
-      contactNo: policy.contactNo,
-      email: policy.email,
-      policyNo: policy.policyNo,
+      customerName: customerName,
+      contactNo: policy.mobile || "",
+      email: policy.email || "",
+      policyNo: policy.policyNumber || "",
       endDate: policy.endDate,
       reminderDate: reminderDate,
       reminderDays: reminderDays,
@@ -61,7 +71,7 @@ exports.createReminder = async (req, res) => {
 exports.getAllReminders = async (req, res) => {
   try {
     const reminders = await RenewalReminder.find()
-      .populate("policyId", "policyNo insuredName premium totalAmount endDate vehicleNumber department")
+      .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment")
       .sort({ reminderDate: 1 });
 
     res.status(200).json({
@@ -83,7 +93,7 @@ exports.getReminderById = async (req, res) => {
     const { id } = req.params;
     
     const reminder = await RenewalReminder.findById(id)
-      .populate("policyId", "policyNo insuredName premium totalAmount endDate vehicleNumber department");
+      .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment");
 
     if (!reminder) {
       return res.status(404).json({
@@ -110,7 +120,7 @@ exports.getRemindersByPolicy = async (req, res) => {
     const { policyId } = req.params;
     
     const reminders = await RenewalReminder.find({ policyId })
-      .populate("policyId", "policyNo insuredName premium totalAmount endDate vehicleNumber department")
+      .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -140,7 +150,7 @@ exports.getRemindersByDateRange = async (req, res) => {
     }
     
     const reminders = await RenewalReminder.find(query)
-      .populate("policyId", "policyNo insuredName premium totalAmount endDate vehicleNumber department")
+      .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment")
       .sort({ reminderDate: 1 });
 
     res.status(200).json({
@@ -216,14 +226,14 @@ exports.deleteReminder = async (req, res) => {
 exports.autoCreateReminders = async (req, res) => {
   try {
     const today = new Date();
-    const next30Days = new Date();
-    next30Days.setDate(today.getDate() + 30);
+    const next60Days = new Date();
+    next60Days.setDate(today.getDate() + 60);
 
-    // Find policies expiring in next 30 days
-    const expiringPolicies = await Policy.find({
-      endDate: { $gte: today, $lte: next30Days },
+    // Find policies expiring in next 60 days
+    const expiringPolicies = await policyDetailModel.find({
+      endDate: { $gte: today, $lte: next60Days },
       status: true,
-    });
+    }).populate("retailCustomer").populate("customerGroup");
 
     const createdReminders = [];
     const skippedReminders = [];
@@ -238,12 +248,20 @@ exports.autoCreateReminders = async (req, res) => {
         const reminderDate = new Date(policy.endDate);
         reminderDate.setDate(policy.endDate.getDate() - 7);
 
+        let customerName = policy.cutomerName || "";
+        if (!customerName && policy.retailCustomer) {
+          customerName = policy.retailCustomer.name;
+        }
+        if (!customerName && policy.customerGroup) {
+          customerName = policy.customerGroup.groupName || policy.customerGroup.name;
+        }
+
         const reminder = await RenewalReminder.create({
           policyId: policy._id,
-          customerName: policy.insuredName,
-          contactNo: policy.contactNo,
-          email: policy.email,
-          policyNo: policy.policyNo,
+          customerName: customerName,
+          contactNo: policy.mobile || "",
+          email: policy.email || "",
+          policyNo: policy.policyNumber || "",
           endDate: policy.endDate,
           reminderDate: reminderDate,
           reminderDays: 7,
@@ -252,7 +270,7 @@ exports.autoCreateReminders = async (req, res) => {
       } else {
         skippedReminders.push({
           policyId: policy._id,
-          policyNo: policy.policyNo,
+          policyNo: policy.policyNumber,
           reason: "Reminder already exists",
         });
       }
@@ -278,12 +296,12 @@ exports.autoCreateReminders = async (req, res) => {
 exports.getExpiringPoliciesWithoutReminder = async (req, res) => {
   try {
     const today = new Date();
-    const next30Days = new Date();
-    next30Days.setDate(today.getDate() + 30);
+    const next60Days = new Date();
+    next60Days.setDate(today.getDate() + 60);
 
-    // Find policies expiring in next 30 days
-    const expiringPolicies = await Policy.find({
-      endDate: { $gte: today, $lte: next30Days },
+    // Find policies expiring in next 60 days
+    const expiringPolicies = await policyDetailModel.find({
+      endDate: { $gte: today, $lte: next60Days },
       status: true,
     });
 
@@ -338,7 +356,7 @@ exports.getRemindersByCustomerName = async (req, res) => {
     const reminders = await RenewalReminder.find({
       customerName: { $regex: name, $options: "i" },
     })
-      .populate("policyId", "policyNo insuredName premium totalAmount endDate vehicleNumber department")
+      .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment")
       .sort({ reminderDate: 1 });
 
     res.status(200).json({

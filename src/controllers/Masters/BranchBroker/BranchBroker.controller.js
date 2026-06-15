@@ -8,9 +8,7 @@ const getBranchBrokerController = async (req, res) => {
       companyId: new mongoose.Types.ObjectId(companyId),
     });
     if (!branchBrokers || branchBrokers.length === 0) {
-      return res
-        .status(404)
-        .json({ status: "false", message: "No Branch Broker found" });
+      return res.status(200).json({ status: "true", data: [] });
     }
     // sort data from newest to oldest
     branchBrokers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

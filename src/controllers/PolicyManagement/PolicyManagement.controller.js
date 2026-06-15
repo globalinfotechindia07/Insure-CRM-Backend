@@ -77,7 +77,11 @@ const getPolicyDetail = async (req, res) => {
       clearFY.length === 24 &&
       mongoose.Types.ObjectId.isValid(clearFY)
     ) {
-      query.financialYear = new mongoose.Types.ObjectId(clearFY);
+      query.$or = [
+        { financialYear: new mongoose.Types.ObjectId(clearFY) },
+        { financialYear: null },
+        { financialYear: { $exists: false } }
+      ];
     }
 
     if (query) {
@@ -85,6 +89,8 @@ const getPolicyDetail = async (req, res) => {
         .find(query)
         .populate("insDepartment")
         .populate("insCompany")
+        .populate("retailCustomer")
+        .populate("customerGroup")
         .sort({ createdAt: -1 });
       // .populate("ProductOrServiceCategory");
       // .populate("financialYear");
@@ -92,7 +98,7 @@ const getPolicyDetail = async (req, res) => {
       // console.log("------------------------------------------", policyDetail);
 
       if (!policyDetail || policyDetail.length === 0) {
-        return res.status(404).json({ message: "policy detail not found" });
+        return res.status(200).json({ status: "true", data: [] });
       }
 
       // // sort data from newest to oldest
@@ -430,10 +436,8 @@ const importCsv = async (req, res) => {
       return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    // console.log("row", rows);
-
     const toLowerSafe = (val) =>
-      typeof val === "string" ? val.toLowerCase().trim() : val;
+      val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
 
     const insDepartments = await insDepartmentModel.find(
       {},
@@ -460,12 +464,27 @@ const importCsv = async (req, res) => {
 
     const excelDateToJSDate = (excelDate) => {
       if (!excelDate) return null;
-      // Excel date starts from 1900-01-01
+      if (typeof excelDate === "string") {
+        if (/^\d+$/.test(excelDate.trim())) {
+          return new Date(Math.round((Number(excelDate) - 25569) * 86400 * 1000));
+        }
+        const parsed = new Date(excelDate);
+        if (!isNaN(parsed.getTime())) return parsed;
+        const parts = excelDate.split(/[-/]/);
+        if (parts.length === 3) {
+          if (parts[2].length === 4) {
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+          } else if (parts[0].length === 4) {
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+          }
+        }
+        return null;
+      }
       return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
     };
 
     const policyDetailsArray = rows.map((row) => ({
-      financialYear: row["Financial Year"] || "",
+      financialYear: row["Financial Year"] || undefined,
       companyId: "68ca95091d6a9cc2b96ae263",
       branchCode: "695386ca12bb6dd679ffa330",
       branchName: "NAGPUR",
@@ -483,18 +502,18 @@ const importCsv = async (req, res) => {
       netPremium: Number(row["NET PREMIUM"]) || 0,
       totalAmount: Number(row["TOTAL PREMIUM ( WITH GST )"]) || 0,
       renewalDate: excelDateToJSDate(row["EXPIRED DATE"]),
-      insDepartment: departmentMap[toLowerSafe(row["DEPARTMENT"])] || "",
+      insDepartment: departmentMap[toLowerSafe(row["DEPARTMENT"])] || undefined,
 
       product:
         products.find(
           (p) =>
             toLowerSafe(p.productName) === toLowerSafe(row["PRODUCT TYPE"]),
-        )?._id || "",
+        )?._id || undefined,
 
       insCompany:
         companyList.find(
           (c) => c.key === toLowerSafe(row["COMPANY"]).slice(0, 4),
-        )?._id || "",
+        )?._id || undefined,
 
       insurerName:
         companyList.find(
@@ -514,11 +533,6 @@ const importCsv = async (req, res) => {
       paidAmount: Number(row["TOTAL PREMIUM ( WITH GST )"]) || 0,
       gstNo: row["GST/UDYOG AADHAAR"] || "",
     }));
-
-    // console.log(
-    //   "-----------------------------------------------------------------------",
-    // );
-    // console.log("PolicyData ", policyDetailsArray);
 
     let insertedDocs = [];
     let failedDocs = [];
@@ -557,15 +571,9 @@ const importCsv = async (req, res) => {
     }
   } catch (e) {
     console.error(e);
-    insertedDocs = error.insertedDocs || [];
-    failedDocs = error.writeErrors.map((e) => ({
-      index: e.index,
-      error: e.errmsg,
-      document: policyDetailsArray[e.index],
-    }));
     return res
       .status(500)
-      .json({ STATUS: false, error: e.message, failedDocs: failedDocs });
+      .json({ success: false, error: e.message });
   }
 };
 
@@ -613,6 +621,8 @@ const exportCsv = async (req, res) => {
         product: obj.product?.productName || "",
         subProduct: obj.subProduct?.subProductName || "",
         retailCustomer: obj.retailCustomer?.name || "",
+        customerGroup: obj.customerGroup?.groupName || obj.customerGroup?.name || "",
+        subCustomerGroup: obj.subCustomerGroup?.subCustomerGroup || obj.subCustomerGroup?.name || "",
         gst: obj.gst?.value || "",
         tpGst: obj.tpGst?.value || "",
         odGst: obj.odGst?.value || "",
@@ -748,12 +758,22 @@ const exportCsv = async (req, res) => {
         value: "totalBrokerageAmountincGst",
       },
     ];
+    const excelData = exportData.map((row) => {
+      const mappedRow = {};
+      csvFields.forEach((field) => {
+        mappedRow[field.label] = row[field.value] !== undefined ? row[field.value] : "";
+      });
+      return mappedRow;
+    });
 
-    const csvParser = new CsvParser({ fields: csvFields });
-    const csvData = csvParser.parse(exportData);
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", "attachment; filename=policies.csv");
-    res.status(200).end(csvData);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    XLSX.utils.book_append_sheet(wb, ws, "Policies");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=policies.xlsx");
+    res.status(200).send(buffer);
   } catch (error) {
     console.error("Error exporting CSV:", error);
     res.status(500).send("An error occurred while exporting the data.");

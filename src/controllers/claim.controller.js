@@ -1,15 +1,22 @@
 const Claim = require("../models/claim.model");
-const Policy = require("../models/policy.model");
 const Surveyor = require("../models/surveyor.model");
 const TPA = require("../models/tpa.model");
 const Investigator = require("../models/investigator.model");
+const { policyDetailModel } = require("../models/index");
 
 // =========================================
 // COMMON POPULATE FUNCTION (UPDATED)
 // =========================================
 const populateAll = (query) => {
   return query
-    .populate("policyId")
+    .populate({
+      path: "policyId",
+      populate: [
+        { path: "retailCustomer" },
+        { path: "customerGroup" },
+        { path: "insDepartment" }
+      ]
+    })
     .populate("preliminarySurveyorId")  // ✅ Preliminary Surveyor
     .populate("finalSurveyorId")        // ✅ Final Surveyor
     .populate("tpaId")                  // ✅ TPA
@@ -25,32 +32,43 @@ exports.createClaim = async (req, res) => {
 
     // AUTO POLICY DATA
     if (payload.policyId) {
-      const policy = await Policy.findById(payload.policyId);
+      const policy = await policyDetailModel.findById(payload.policyId)
+        .populate("insDepartment")
+        .populate("retailCustomer")
+        .populate("customerGroup");
 
       if (policy) {
+        let insuredName = policy.cutomerName || "";
+        if (!insuredName && policy.retailCustomer) {
+          insuredName = policy.retailCustomer.name;
+        }
+        if (!insuredName && policy.customerGroup) {
+          insuredName = policy.customerGroup.groupName || policy.customerGroup.name;
+        }
+
         payload = {
           ...payload,
-          policyNo: policy.policyNo,
-          insuredName: policy.insuredName,
-          contactNo: policy.contactNo,
-          email: policy.email,
-          contactPerson: policy.contactPerson,
-          policyDepartment: policy.department,
-          locationOfProperty: policy.location,
-          renewalOrNewPolicy: policy.renewalType,
-          typeOfPolicy: policy.typeOfPolicy,
-          wording: policy.wording,
-          additionalWordings: policy.additionalWordings,
-          financialInstitutionsAndLenders: policy.financialInstitutions,
-          briefDescriptionOfProperty: policy.propertyDescription,
-          sumInsured: policy.sumInsured,
-          periodOfInsurance: policy.insurancePeriod,
-          insurerName: policy.insurerName,
-          vehicleNumber: policy.vehicleNumber,
-          netPremium: policy.netPremium,
-          gst: policy.gst,
-          totalAmount: policy.totalAmount,
-          paymentMode: policy.paymentMode,
+          policyNo: policy.policyNumber || "",
+          insuredName: insuredName,
+          contactNo: policy.mobile || "",
+          email: policy.email || "",
+          contactPerson: policy.cutomerName || "",
+          policyDepartment: policy.insDepartment ? policy.insDepartment.insDepartment : "",
+          locationOfProperty: policy.siteLocation || "",
+          renewalOrNewPolicy: policy.renewable || "",
+          typeOfPolicy: policy.policyType || "",
+          wording: policy.marineClause || "",
+          additionalWordings: "",
+          financialInstitutionsAndLenders: "",
+          briefDescriptionOfProperty: policy.propertyDescription || "",
+          sumInsured: policy.sumInsured || 0,
+          periodOfInsurance: policy.policyDuration || "",
+          insurerName: policy.insurerName || "",
+          vehicleNumber: policy.vehicleNumber || "",
+          netPremium: policy.netPremium || 0,
+          gst: 0,
+          totalAmount: policy.totalAmount || 0,
+          paymentMode: policy.paymentMode || "",
         };
       }
     }

@@ -253,9 +253,6 @@ const tpaRouter = require("../routes/tpa.routes");
 const investigatorRouter = require("../routes/investigator.route");
 
 const claimRouter = require("../routes/claim.routes");
-const policyRouter = require(
-  "../routes/policy.route"
-);
 
 
 
@@ -1032,10 +1029,7 @@ const defaultRoutes = [
   path: "/claim",
   route: claimRouter,
 },
-{
-  path: "/policy",
-  route: policyRouter,
-},
+
   {
     path: "/renewal-reminder",
     route: renewalReminderRouter,
