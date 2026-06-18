@@ -66,48 +66,49 @@ const getPolicyDetailByFY = async (req, res) => {
 // get policy details
 const getPolicyDetail = async (req, res) => {
   try {
-    const { financialYear } = req.query;
+    const { financialYear, policyNumber } = req.query;
     // const { companyId } = req.query;
 
-    const clearFY = financialYear?.toString().substring(0, 24);
     const query = {};
-
-    if (
-      clearFY &&
-      clearFY.length === 24 &&
-      mongoose.Types.ObjectId.isValid(clearFY)
-    ) {
-      query.$or = [
-        { financialYear: new mongoose.Types.ObjectId(clearFY) },
-        { financialYear: null },
-        { financialYear: { $exists: false } }
-      ];
-    }
-
-    if (query) {
-      const policyDetail = await policyDetailModel
-        .find(query)
-        .populate("insDepartment")
-        .populate("insCompany")
-        .populate("retailCustomer")
-        .populate("customerGroup")
-        .sort({ createdAt: -1 });
-      // .populate("ProductOrServiceCategory");
-      // .populate("financialYear");
-
-      // console.log("------------------------------------------", policyDetail);
-
-      if (!policyDetail || policyDetail.length === 0) {
-        return res.status(200).json({ status: "true", data: [] });
+    if (policyNumber) {
+      query.policyNumber = policyNumber;
+    } else {
+      const clearFY = financialYear?.toString().substring(0, 24);
+      if (
+        clearFY &&
+        clearFY.length === 24 &&
+        mongoose.Types.ObjectId.isValid(clearFY)
+      ) {
+        query.$or = [
+          { financialYear: new mongoose.Types.ObjectId(clearFY) },
+          { financialYear: null },
+          { financialYear: { $exists: false } }
+        ];
       }
-
-      // // sort data from newest to oldest
-      // policyDetail.sort(
-      //   (a, b) => new Date(b.createdAt) - new Date(a.createdAt), // b is newer, a is older
-      // );
-
-      return res.status(200).json({ status: "true", data: policyDetail });
     }
+
+    const policyDetail = await policyDetailModel
+      .find(query)
+      .populate("insDepartment")
+      .populate("insCompany")
+      .populate("retailCustomer")
+      .populate("customerGroup")
+      .sort({ createdAt: -1 });
+    // .populate("ProductOrServiceCategory");
+    // .populate("financialYear");
+
+    // console.log("------------------------------------------", policyDetail);
+
+    if (!policyDetail || policyDetail.length === 0) {
+      return res.status(200).json({ status: "true", data: [] });
+    }
+
+    // // sort data from newest to oldest
+    // policyDetail.sort(
+    //   (a, b) => new Date(b.createdAt) - new Date(a.createdAt), // b is newer, a is older
+    // );
+
+    return res.status(200).json({ status: "true", data: policyDetail });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -135,6 +136,7 @@ const postPolicyDetail = async (req, res) => {
       showNominee,
       nomineeName,
       nomineeRelation,
+      nomineeContact,
       insDepartment,
       product,
       subProduct,
@@ -218,6 +220,8 @@ const postPolicyDetail = async (req, res) => {
       totalBrokerageAmount,
       totalBrokerageGst,
       totalBrokerageAmountincGst,
+      sharePercentage,
+      coBrokerageAmount,
     } = req.body;
 
     const { companyId } = req.query;
@@ -241,6 +245,7 @@ const postPolicyDetail = async (req, res) => {
       showNominee,
       nomineeName,
       nomineeRelation,
+      nomineeContact,
       insDepartment: req.body.insDepartment || undefined,
       product: req.body.product || undefined,
       subProduct: req.body.subProduct || undefined,
@@ -324,6 +329,8 @@ const postPolicyDetail = async (req, res) => {
       totalBrokerageAmount,
       totalBrokerageGst,
       totalBrokerageAmountincGst,
+      sharePercentage: req.body.sharePercentage || undefined,
+      coBrokerageAmount: req.body.coBrokerageAmount || undefined,
       companyId,
     });
 
@@ -654,6 +661,7 @@ const exportCsv = async (req, res) => {
       { label: "Show Nominee", value: "showNominee" },
       { label: "Nominee Name", value: "nomineeName" },
       { label: "Nominee Relation", value: "nomineeRelation" },
+      { label: "Nominee Contact", value: "nomineeContact" },
       { label: "Insurance Department", value: "insDepartment" },
       { label: "Product", value: "product" },
       { label: "Sub Product", value: "subProduct" },

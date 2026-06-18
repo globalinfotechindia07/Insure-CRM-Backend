@@ -76,6 +76,9 @@ const policyDetailSchema = new mongoose.Schema(
     nomineeRelation: {
       type: String,
     },
+    nomineeContact: {
+      type: String,
+    },
     insDepartment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "insDepartment",
@@ -364,6 +367,12 @@ const policyDetailSchema = new mongoose.Schema(
       type: Number,
     },
     totalBrokerageAmountincGst: {
+      type: Number,
+    },
+    sharePercentage: {
+      type: Number,
+    },
+    coBrokerageAmount: {
       type: Number,
     },
     createdBy: mongoose.Types.ObjectId,
