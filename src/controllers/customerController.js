@@ -8,13 +8,7 @@ exports.createCustomer = async (req, res) => {
     // 🔥 Auto Customer ID
     body.customerId = "CUST" + Date.now();
 
-    // 🔥 Corporate validation
-    if (body.clientType === "corporate" && !body.gst) {
-      return res.status(400).json({
-        success: false,
-        message: "GST is required for corporate clients",
-      });
-    }
+
 
     const customer = new Customer(body);
     await customer.save();

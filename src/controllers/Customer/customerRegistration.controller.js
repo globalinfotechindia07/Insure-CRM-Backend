@@ -43,23 +43,10 @@ const createCustomerRegistration = async (req, res) => {
       city,
       state,
       contactPerson,
+      authorisedPersonName,
+      authorisedPersonContact,
+      authorisedPersonEmail,
     } = req.body;
-
-    // 🔍 Basic validation for required fields
-    const requiredFields = [
-      { field: name, name: "name" },
-      { field: mobile, name: "mobile" },
-      { field: email, name: "email" }
-    ];
-
-    const missingFields = requiredFields.filter(item => !item.field || item.field.trim() === "");
-    
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Required fields missing: ${missingFields.map(f => f.name).join(", ")}`,
-      });
-    }
 
     // Generate customer ID if not provided
     let finalCustomerId = customerId;
@@ -72,12 +59,12 @@ const createCustomerRegistration = async (req, res) => {
       customerType: clientType || "Individual",
       customerId: finalCustomerId,
       prefix: prefix || "",
-      name: name.trim(),
+      name: name ? name.trim() : "",
       customerGroupName: (customerGroupName && customerGroupName.trim() !== "") ? customerGroupName : undefined,
       dob: dob || null,
       doj: doj || new Date(),
-      email: email.toLowerCase().trim(),
-      mobile: mobile.trim(),
+      email: email ? email.toLowerCase().trim() : "",
+      mobile: mobile ? mobile.trim() : "",
       panNo: panNo ? panNo.toUpperCase().trim() : "",
       aadharNo: aadharNo || "",
       drivingLicenseNo: drivingLicenseNo || "",
@@ -93,6 +80,9 @@ const createCustomerRegistration = async (req, res) => {
         email: person?.email?.toLowerCase().trim() ?? "",
         phone: person?.phone?.trim() ?? "",
       })) || [],
+      authorisedPersonName: authorisedPersonName || "",
+      authorisedPersonContact: authorisedPersonContact || "",
+      authorisedPersonEmail: authorisedPersonEmail ? authorisedPersonEmail.toLowerCase().trim() : "",
     });
     
     await newCustomerRegistration.save();

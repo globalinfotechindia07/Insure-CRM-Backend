@@ -222,8 +222,8 @@ module.exports.PayeeParentGroupModel = require("./Masters/payeeParent.model");
 module.exports.PatientPayeeModel = require("./Masters/patientpayee.model");
 module.exports.CategoryMasterModel = require("./Masters/category.model");
 
-// company Settings
-module.exports.companySettingsModel = require("./CompanySettings/CompanySettings.model");
+// branch Settings
+module.exports.branchSettingsModel = require("./BranchSettings/BranchSettings.model");
 
 //invoice
 module.exports.InvoiceModel = require("./Invoice/invoice.model");

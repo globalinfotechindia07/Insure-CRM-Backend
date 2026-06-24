@@ -181,8 +181,8 @@ module.exports.refferByController = require("./Masters/refferByMaster.controller
 //Category
 module.exports.categoryController = require("./Masters/category.controller");
 
-// company settings
-module.exports.CompanySettingsController = require("./CompanySettings/CompanySettings.controller");
+// branch settings
+module.exports.BranchSettingsController = require("./BranchSettings/BranchSettings.controller");
 
 //invoice
 

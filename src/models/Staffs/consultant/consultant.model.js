@@ -11,6 +11,8 @@ const basicDetailsSchema = new mongoose.Schema({
   dateOfAnniversary: { type: Date },
   adharNumber: { type: String },
   panNumber: { type: String },
+  pfNumber: { type: String },
+  esicNumber: { type: String },
   profilePhoto: { type: String },
   passPortNumber: { type: String },
 

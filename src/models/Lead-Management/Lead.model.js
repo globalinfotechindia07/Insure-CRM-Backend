@@ -33,7 +33,7 @@ const leadSchema = new mongoose.Schema(
       ref: "Admin",
       required: true,
     },
-    Prospect: { type: mongoose.Schema.Types.ObjectId, ref: "prospect" },
+    Prospect: { type: mongoose.Schema.Types.ObjectId, ref: "branchSettings" },
     Client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AdminclientRegistration",

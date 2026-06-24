@@ -214,7 +214,7 @@ const SinceRouter = require("./OPD/since.route");
 const TemplateSectionRouter = require("./Template/templateSection.route");
 const formSetupVitalsMaster = require("./Masters/formSetup/formSetupVitalMaster.route");
 const crossConsultationRoute = require("./OPD/Patient/patient_cross_consultation.route");
-const companySettingsRouter = require("./CompanySettings/CompanySettings.route");
+const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
 //invoice
 
@@ -864,8 +864,8 @@ const defaultRoutes = [
     route: positionRouter,
   },
   {
-    path: "/companySettings",
-    route: companySettingsRouter,
+    path: "/branchSettings",
+    route: branchSettingsRouter,
   },
   {
     path: "/insCompany",
