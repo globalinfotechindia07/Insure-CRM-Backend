@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearModel, CustomerRegistrationModel, customerGroupModel, GstPercentageModel } = require("../../models/index");
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
 const RenewalReminder = require("../../models/renewalReminder.model");
+const axios = require("axios");
 
 const csv = require("csvtojson");
 const XLSX = require("xlsx");
@@ -602,7 +603,27 @@ const importCsv = async (req, res) => {
       return map;
     }, {});
 
+    const existingPolicies = await policyDetailModel.find({}, { policyNumber: 1 });
+    const existingPolicyNumbers = new Set(
+      existingPolicies
+        .map((p) => String(p.policyNumber || "").trim().toLowerCase())
+        .filter((p) => p !== "")
+    );
+    const seenInFile = new Set();
+
     for (const row of rows) {
+      const rawPolicyNumber = getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "";
+      const policyNumber = String(rawPolicyNumber).trim();
+      const policyNumberKey = policyNumber.toLowerCase();
+
+      if (policyNumberKey) {
+        if (existingPolicyNumbers.has(policyNumberKey) || seenInFile.has(policyNumberKey)) {
+          console.log(`Skipping duplicate policy: ${policyNumber}`);
+          continue;
+        }
+        seenInFile.add(policyNumberKey);
+      }
+
       const clientType = toLowerSafe(getValueByPossibleKeys(row, "CUSTOMER TYPE", "CLIENT TYPE")) || "retail";
       const insuredName = String(getValueByPossibleKeys(row, "INSURED NAME", "CUSTOMER NAME", "CLIENT NAME") || "").trim();
       const mobile = String(getValueByPossibleKeys(row, "MOBILE NO", "MOBILE", "PHONE") || "").trim();
@@ -995,6 +1016,8 @@ const exportCsv = async (req, res) => {
 const sendReminder = async (req, res) => {
   try {
     const { id } = req.params;
+    const { templateId, variables, mobile } = req.body;
+
     const policy = await policyDetailModel.findById(id)
       .populate("retailCustomer")
       .populate("customerGroup");
@@ -1019,18 +1042,85 @@ const sendReminder = async (req, res) => {
       customerName = "Valued Customer";
     }
 
-    // Prepare dummy text message content
-    const policyNumber = policy.policyNumber || "N/A";
-    const expiryDate = policy.endDate ? new Date(policy.endDate).toLocaleDateString('en-GB') : "N/A";
-    const dummyMessage = `Hello ${customerName}, this is a reminder that your policy ${policyNumber} is expiring on ${expiryDate}. Please renew it to enjoy continuous coverage.`;
+    const DLT_TEMPLATES = {
+      "1707171229475133470": {
+        text: "Dear Sir / Madam\nYour Vehicle Policy No {var1} for vehicle No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229478113200": {
+        text: "Dear Sir / Madam\nYour Vehicle Policy No {var1} for vehicle No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229481145664": {
+        text: "Dear Sir / Madam\nYour {var1} Policy No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229847086671": {
+        text: "Dear Sir / Madam\nYour {var1} is due for Renewal on {var2} which has not yet been renewed as per our records. Please renew it immediately\nContact us\n7507553335, 7757825335 \nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171705453558611": {
+        text: "Dear Sir / Madam\nYour {var1} Policy No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records. Please renew it immediately\nContact us\n7507553335, 7757825335 \nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154526920734": {
+        text: "Dear Sir / Madam\nYour Private Car Policy No {var1} for vehicle No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154531182881": {
+        text: "Dear Sir / Madam\nYour Mediclaim Policy No {var1} is due for Renewal on {var2}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154535303724": {
+        text: "Reminder\nDear Sir / Madam\nYour Private Car Policy No {var1} for vehicle No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154539354305": {
+        text: "Reminder\nDear Sir / Madam\nYour Mediclaim Policy No {var1} due for Renewal on {var2} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      }
+    };
 
-    console.log(`[SMS/Text Message Sent] To: ${policy.mobile || "N/A"}, Message: ${dummyMessage}`);
+    let compiledMessage = "";
+    const targetMobile = mobile || policy.mobile || "";
+
+    if (templateId && DLT_TEMPLATES[templateId]) {
+      let templateText = DLT_TEMPLATES[templateId].text;
+      if (Array.isArray(variables)) {
+        variables.forEach((val, idx) => {
+          templateText = templateText.replace(new RegExp(`\\{var${idx + 1}\\}`, 'g'), val || "");
+        });
+      }
+      compiledMessage = templateText;
+    } else {
+      // Fallback message
+      const policyNumber = policy.policyNumber || "N/A";
+      const expiryDate = policy.endDate ? new Date(policy.endDate).toLocaleDateString('en-GB') : "N/A";
+      compiledMessage = `Dear Sir / Madam\nYour Policy No ${policyNumber} is due for Renewal on ${expiryDate}.\nKindly renew the policy before expiry for continuous coverage.\nRegards\nJP Insurance Brokers`;
+    }
+
+    console.log(`[SMS/Text Message Triggered] To: ${targetMobile}, Template: ${templateId || "Fallback"}, Message: ${compiledMessage}`);
+
+    let apiSuccess = false;
+    let apiResponse = null;
+
+    if (targetMobile) {
+      try {
+        const apikey = "6605155b543da";
+        const route = "transactional";
+        const sender = "JPINBR";
+        const dltentityid = "1501333130000043941";
+        
+        // Build API URL
+        const apiUrl = `http://commnestsms.com/api/push.json?apikey=${apikey}&route=${route}&sender=${sender}&mobileno=${targetMobile}&text=${encodeURIComponent(compiledMessage)}&dltentityid=${dltentityid}${templateId ? `&dlttemplateid=${templateId}` : ''}`;
+        
+        const response = await axios.get(apiUrl);
+        apiResponse = response.data;
+        apiSuccess = true;
+        console.log(`[SMS/Text Message API Success] Response:`, apiResponse);
+      } catch (apiError) {
+        console.error("Error calling CommNest API:", apiError.message);
+        apiResponse = { error: apiError.message };
+      }
+    }
 
     // Create or update RenewalReminder entry
+    const policyNumber = policy.policyNumber || "N/A";
     let existingReminder = await RenewalReminder.findOne({ policyId: id });
     if (existingReminder) {
       existingReminder.customerName = customerName;
-      existingReminder.contactNo = policy.mobile || "";
+      existingReminder.contactNo = targetMobile;
       existingReminder.email = policy.email || "";
       existingReminder.reminderDate = new Date();
       existingReminder.status = "active";
@@ -1039,7 +1129,7 @@ const sendReminder = async (req, res) => {
       await RenewalReminder.create({
         policyId: id,
         customerName: customerName,
-        contactNo: policy.mobile || "",
+        contactNo: targetMobile,
         email: policy.email || "",
         policyNo: policyNumber,
         endDate: policy.endDate || new Date(),
@@ -1051,9 +1141,10 @@ const sendReminder = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Reminder message sent successfully",
+      message: apiSuccess ? "Reminder message sent successfully" : "Reminder compiled but gateway call failed",
       messageCount: policy.messageCount,
-      dummyMessage: dummyMessage
+      dummyMessage: compiledMessage,
+      apiResponse
     });
   } catch (error) {
     console.error("Error sending reminder:", error);

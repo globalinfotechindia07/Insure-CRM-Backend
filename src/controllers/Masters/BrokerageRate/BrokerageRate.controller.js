@@ -37,6 +37,16 @@ const postBrokerageRateController = async (req, res) => {
         message: " Brokerage Rate is required",
       });
     }
+    const existingRate = await brokerageRateModel.findOne({
+      companyId,
+      brokerageRate: Number(brokerageRate),
+    });
+    if (existingRate) {
+      return res.status(400).json({
+        status: "false",
+        message: "Brokerage Rate already exists",
+      });
+    }
     const newbrokerageRate = new brokerageRateModel({
       brokerageRate: Number(brokerageRate),
       companyId: new mongoose.Types.ObjectId(companyId),

@@ -1,7 +1,7 @@
 // const { companyModel } = require('../../models/index')
 const { default: mongoose } = require("mongoose");
 const { contactModel } = require("../../models/index");
-const { departmentModel } = require("../../models/index");
+const { insDepartmentModel } = require("../../models/index");
 
 const getContacts = async (req, res) => {
   try {
@@ -12,9 +12,9 @@ const getContacts = async (req, res) => {
       .sort({ createdAt: -1 });
 
     // Optional: Attach full department data (from separate model)
-    const departments = await departmentModel.find().sort({ createdAt: -1 });
+    const departments = await insDepartmentModel.find().sort({ createdAt: -1 });
     const enriched = contacts.map((c) => {
-      const dept = departments.find((d) => d.department === c.department);
+      const dept = departments.find((d) => d.insDepartment === c.department);
       return {
         ...c,
         departmentDetails: dept || null,
@@ -47,11 +47,11 @@ const createContact = async (req, res) => {
     // 🔍 Lookup department by name (only if provided)
     let deptName = "";
     if (department) {
-      const dept = await departmentModel.findOne({ department });
+      const dept = await insDepartmentModel.findOne({ insDepartment: department });
       if (!dept) {
         return res.status(400).json({ message: "Invalid department name" });
       }
-      deptName = dept.department;
+      deptName = dept.insDepartment;
     }
 
     const newContact = new contactModel({
@@ -91,8 +91,8 @@ const getContactById = async (req, res) => {
     // contact.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // 2. Fetch the full department object using department name
-    const dept = await departmentModel.findOne({
-      department: contact.department,
+    const dept = await insDepartmentModel.findOne({
+      insDepartment: contact.department,
     });
 
     // 3. Attach full department details if found
@@ -125,7 +125,7 @@ const updateContact = async (req, res) => {
     });
 
     // 🔍 Lookup department by name
-    const dept = await departmentModel.findOne({ department });
+    const dept = await insDepartmentModel.findOne({ insDepartment: department });
 
     if (!dept) {
       return res.status(400).json({ message: "Invalid department name" });
@@ -146,7 +146,7 @@ const updateContact = async (req, res) => {
         email,
         designation,
         phone,
-        department: dept.department,
+        department: dept.insDepartment,
       },
       { new: true }
     );

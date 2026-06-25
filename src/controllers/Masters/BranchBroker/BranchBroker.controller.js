@@ -31,6 +31,16 @@ const postBranchBrokerController = async (req, res) => {
         .status(400)
         .json({ status: "false", message: " Branch Broker is required" });
     }
+    const existingBranchBroker = await branchBrokerModel.findOne({
+      companyId,
+      branchBroker: { $regex: new RegExp(`^${branchBroker.trim()}$`, "i") }
+    });
+    if (existingBranchBroker) {
+      return res.status(400).json({
+        status: "false",
+        message: "Broker Branch Name already exists",
+      });
+    }
     const newInsDepartment = new branchBrokerModel({
       branchBroker,
       companyId: new mongoose.Types.ObjectId(companyId),

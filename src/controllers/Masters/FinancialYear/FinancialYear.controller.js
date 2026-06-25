@@ -32,6 +32,18 @@ const postFinancialYearController = async (req, res) => {
 
     const { companyId } = req.query;
 
+    const existingFY = await financialYearModel.findOne({
+      companyId,
+      fromDate: new Date(fromDate)
+    });
+
+    if (existingFY) {
+      return res.status(400).json({
+        status: false,
+        message: "Financial year already exists",
+      });
+    }
+
     // 📝 Create new financialYear document
     const newfinancialYear = new financialYearModel({
       fromDate,

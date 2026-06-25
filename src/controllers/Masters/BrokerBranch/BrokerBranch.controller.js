@@ -41,6 +41,18 @@ const postBrokerBranchController = async (req, res) => {
       });
     }
 
+    const existingBranch = await BrokerBranchModel.findOne({
+      companyId,
+      branchCode: { $regex: new RegExp(`^${branchCode.trim()}$`, "i") }
+    });
+
+    if (existingBranch) {
+      return res.status(400).json({
+        status: "false",
+        message: "Branch with this branch code already exists",
+      });
+    }
+
     const newBrokerBranch = new BrokerBranchModel({
       branchId,
       branchCode,

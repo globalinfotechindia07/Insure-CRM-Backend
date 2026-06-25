@@ -32,10 +32,28 @@ const postProductOrServiceCategory = async (req, res) => {
       });
     }
 
+    // Check for duplicate
+    const existingCategory = await ProductOrServiceCategorymodel.findOne({
+      companyId,
+      productName: { $regex: new RegExp(`^${productName.trim()}$`, "i") },
+      $or: [
+        { department: department },
+        { insDepartment: department }
+      ]
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        status: false,
+        message: "Product category already exists for this department",
+      });
+    }
+
     const newCategory = new ProductOrServiceCategorymodel({
       companyId,
       productName,
       department,  // Changed from insDepartment to department
+      insDepartment: department, // Save to insDepartment as well
     });
 
     await newCategory.save();
@@ -120,7 +138,10 @@ const putProductOrServiceCategory = async (req, res) => {
     // Build update object
     const updateData = {};
     if (productName) updateData.productName = productName;
-    if (department) updateData.department = department;
+    if (department) {
+      updateData.department = department;
+      updateData.insDepartment = department;
+    }
 
     const updatedCategory = await ProductOrServiceCategorymodel.findByIdAndUpdate(
       id,
