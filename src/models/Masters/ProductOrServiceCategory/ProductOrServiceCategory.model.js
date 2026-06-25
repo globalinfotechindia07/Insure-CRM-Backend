@@ -12,7 +12,11 @@ const ProductOrServiceCategorySchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",  // Changed from insDepartment to Department
       set: (v) => (v === "" ? null : v),
-      required: true,  // Make it required
+    },
+    insDepartment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "insDepartment",
+      set: (v) => (v === "" ? null : v),
     },
     productName: { 
       type: String, 

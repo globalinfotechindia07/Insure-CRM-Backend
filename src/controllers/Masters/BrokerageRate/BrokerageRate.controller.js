@@ -11,9 +11,7 @@ const getBrokerageRateController = async (req, res) => {
       companyId: new mongoose.Types.ObjectId(companyId),
     });
     if (!brokerageRates || brokerageRates.length === 0) {
-      return res
-        .status(404)
-        .json({ status: "false", message: "No Brokerage Rate found" });
+      return res.status(200).json({ status: "true", data: [] });
     }
     // sort data from newest to oldest
     brokerageRates.sort(
@@ -37,6 +35,16 @@ const postBrokerageRateController = async (req, res) => {
       return res.status(400).json({
         status: "false",
         message: " Brokerage Rate is required",
+      });
+    }
+    const existingRate = await brokerageRateModel.findOne({
+      companyId,
+      brokerageRate: Number(brokerageRate),
+    });
+    if (existingRate) {
+      return res.status(400).json({
+        status: "false",
+        message: "Brokerage Rate already exists",
       });
     }
     const newbrokerageRate = new brokerageRateModel({

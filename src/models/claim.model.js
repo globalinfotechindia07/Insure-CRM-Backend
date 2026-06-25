@@ -29,7 +29,7 @@ const claimSchema = new mongoose.Schema(
 
     policyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Policy",
+      ref: "policyDetail",
     },
 
     policyNo: String,

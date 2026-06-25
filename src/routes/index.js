@@ -214,7 +214,7 @@ const SinceRouter = require("./OPD/since.route");
 const TemplateSectionRouter = require("./Template/templateSection.route");
 const formSetupVitalsMaster = require("./Masters/formSetup/formSetupVitalMaster.route");
 const crossConsultationRoute = require("./OPD/Patient/patient_cross_consultation.route");
-const companySettingsRouter = require("./CompanySettings/CompanySettings.route");
+const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
 //invoice
 
@@ -253,9 +253,6 @@ const tpaRouter = require("../routes/tpa.routes");
 const investigatorRouter = require("../routes/investigator.route");
 
 const claimRouter = require("../routes/claim.routes");
-const policyRouter = require(
-  "../routes/policy.route"
-);
 
 
 
@@ -867,8 +864,8 @@ const defaultRoutes = [
     route: positionRouter,
   },
   {
-    path: "/companySettings",
-    route: companySettingsRouter,
+    path: "/branchSettings",
+    route: branchSettingsRouter,
   },
   {
     path: "/insCompany",
@@ -1032,10 +1029,7 @@ const defaultRoutes = [
   path: "/claim",
   route: claimRouter,
 },
-{
-  path: "/policy",
-  route: policyRouter,
-},
+
   {
     path: "/renewal-reminder",
     route: renewalReminderRouter,

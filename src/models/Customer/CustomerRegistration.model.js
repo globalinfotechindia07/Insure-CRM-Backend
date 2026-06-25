@@ -32,6 +32,9 @@ const customerRegistrationSchema = new mongoose.Schema(
     state: { type: String, trim: true },
     createdBy: mongoose.Types.ObjectId,
     contactPersons: [ContactPersonSchema],
+    authorisedPersonName: { type: String, trim: true },
+    authorisedPersonContact: { type: String, trim: true },
+    authorisedPersonEmail: { type: String, trim: true, lowercase: true },
   },
   { timestamps: true }
 );

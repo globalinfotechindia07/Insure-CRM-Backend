@@ -3,10 +3,20 @@ const httpStatus = require("http-status");
 
 const addPaymentMode = async (req, res) => {
     try {
-        const paymentMode = await PaymentModeModel.create(req.body);
-        return res.status(httpStatus.CREATED).json({msg: "Payment Mode Added Successfully", paymentMode});
+        const { paymentMode } = req.body;
+        if (!paymentMode) {
+            return res.status(httpStatus.BAD_REQUEST).json({ msg: "Payment Mode is required" });
+        }
+        const existingMode = await PaymentModeModel.findOne({
+            paymentMode: { $regex: new RegExp(`^${paymentMode.trim()}$`, "i") }
+        });
+        if (existingMode) {
+            return res.status(httpStatus.BAD_REQUEST).json({ msg: "Payment Mode already exists" });
+        }
+        const createdPaymentMode = await PaymentModeModel.create(req.body);
+        return res.status(httpStatus.CREATED).json({msg: "Payment Mode Added Successfully", paymentMode: createdPaymentMode});
     } catch (error) {
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({msg: "Payment Mode Not Found", error});
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({msg: "Error adding Payment Mode", error: error.message});
     }
 };
 

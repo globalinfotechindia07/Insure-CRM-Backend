@@ -13,12 +13,19 @@ const createGst = async (req, res) => {
     // const { ugst } = req.body;
     // const { igst } = req.body;
     const { effectiveFrom } = req.body;
+
+    const existingGst = await GstPercentageModel.findOne({
+      companyId,
+      value,
+      isDeleted: false,
+    });
+
+    if (existingGst) {
+      return res.status(400).json({ message: "GST Percentage already exists" });
+    }
+
     const gst = await GstPercentageModel.create({
       value,
-      // cgst,
-      // sgst,
-      // ugst,
-      // igst,
       effectiveFrom,
       companyId,
     });

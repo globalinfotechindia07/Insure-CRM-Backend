@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
-const { policyDetailModel } = require("../../models/index");
-const { insDepartmentModel } = require("../../models/index");
-const { insCompanyModel } = require("../../models/index");
+const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearModel, CustomerRegistrationModel, customerGroupModel, GstPercentageModel } = require("../../models/index");
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
+const RenewalReminder = require("../../models/renewalReminder.model");
+const axios = require("axios");
 
 const csv = require("csvtojson");
 const XLSX = require("xlsx");
@@ -66,42 +66,49 @@ const getPolicyDetailByFY = async (req, res) => {
 // get policy details
 const getPolicyDetail = async (req, res) => {
   try {
-    const { financialYear } = req.query;
+    const { financialYear, policyNumber } = req.query;
     // const { companyId } = req.query;
 
-    const clearFY = financialYear?.toString().substring(0, 24);
     const query = {};
-
-    if (
-      clearFY &&
-      clearFY.length === 24 &&
-      mongoose.Types.ObjectId.isValid(clearFY)
-    ) {
-      query.financialYear = new mongoose.Types.ObjectId(clearFY);
-    }
-
-    if (query) {
-      const policyDetail = await policyDetailModel
-        .find(query)
-        .populate("insDepartment")
-        .populate("insCompany")
-        .sort({ createdAt: -1 });
-      // .populate("ProductOrServiceCategory");
-      // .populate("financialYear");
-
-      // console.log("------------------------------------------", policyDetail);
-
-      if (!policyDetail || policyDetail.length === 0) {
-        return res.status(404).json({ message: "policy detail not found" });
+    if (policyNumber) {
+      query.policyNumber = policyNumber;
+    } else {
+      const clearFY = financialYear?.toString().substring(0, 24);
+      if (
+        clearFY &&
+        clearFY.length === 24 &&
+        mongoose.Types.ObjectId.isValid(clearFY)
+      ) {
+        query.$or = [
+          { financialYear: new mongoose.Types.ObjectId(clearFY) },
+          { financialYear: null },
+          { financialYear: { $exists: false } }
+        ];
       }
-
-      // // sort data from newest to oldest
-      // policyDetail.sort(
-      //   (a, b) => new Date(b.createdAt) - new Date(a.createdAt), // b is newer, a is older
-      // );
-
-      return res.status(200).json({ status: "true", data: policyDetail });
     }
+
+    const policyDetail = await policyDetailModel
+      .find(query)
+      .populate("insDepartment")
+      .populate("insCompany")
+      .populate("retailCustomer")
+      .populate("customerGroup")
+      .sort({ createdAt: -1 });
+    // .populate("ProductOrServiceCategory");
+    // .populate("financialYear");
+
+    // console.log("------------------------------------------", policyDetail);
+
+    if (!policyDetail || policyDetail.length === 0) {
+      return res.status(200).json({ status: "true", data: [] });
+    }
+
+    // // sort data from newest to oldest
+    // policyDetail.sort(
+    //   (a, b) => new Date(b.createdAt) - new Date(a.createdAt), // b is newer, a is older
+    // );
+
+    return res.status(200).json({ status: "true", data: policyDetail });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -129,6 +136,7 @@ const postPolicyDetail = async (req, res) => {
       showNominee,
       nomineeName,
       nomineeRelation,
+      nomineeContact,
       insDepartment,
       product,
       subProduct,
@@ -194,6 +202,8 @@ const postPolicyDetail = async (req, res) => {
       endorsementTerrorism,
       endorsementOtherTerrorism,
       endorsementNetPremium,
+      endorsementGst,
+      endorsementGstAmount,
       paymentMode,
       etotalAmount,
       paidAmount,
@@ -212,6 +222,8 @@ const postPolicyDetail = async (req, res) => {
       totalBrokerageAmount,
       totalBrokerageGst,
       totalBrokerageAmountincGst,
+      sharePercentage,
+      coBrokerageAmount,
     } = req.body;
 
     const { companyId } = req.query;
@@ -235,6 +247,7 @@ const postPolicyDetail = async (req, res) => {
       showNominee,
       nomineeName,
       nomineeRelation,
+      nomineeContact,
       insDepartment: req.body.insDepartment || undefined,
       product: req.body.product || undefined,
       subProduct: req.body.subProduct || undefined,
@@ -300,6 +313,8 @@ const postPolicyDetail = async (req, res) => {
       endorsementTerrorism,
       endorsementOtherTerrorism,
       endorsementNetPremium,
+      endorsementGst: req.body.endorsementGst || undefined,
+      endorsementGstAmount,
       paymentMode,
       etotalAmount,
       paidAmount,
@@ -318,6 +333,8 @@ const postPolicyDetail = async (req, res) => {
       totalBrokerageAmount,
       totalBrokerageGst,
       totalBrokerageAmountincGst,
+      sharePercentage: req.body.sharePercentage || undefined,
+      coBrokerageAmount: req.body.coBrokerageAmount || undefined,
       companyId,
     });
 
@@ -347,9 +364,67 @@ const getPolicyDetailById = async (req, res) => {
         .json({ success: false, message: "Policy not found" });
     }
 
+    let policyObj = policy.toObject();
+    let modified = false;
+
+    // Self-repair if float serial date ended up in renewable field
+    if (policy.renewable && /^\d+(\.\d+)?$/.test(String(policy.renewable).trim()) && !policy.renewalDate) {
+      const serialDate = Number(String(policy.renewable).trim());
+      const parsedDate = new Date(Math.round((serialDate - 25569) * 86400 * 1000));
+      if (!isNaN(parsedDate.getTime())) {
+        policy.renewalDate = parsedDate;
+        policy.endDate = parsedDate;
+        policy.renewable = "RENEWAL";
+
+        policyObj.renewalDate = parsedDate;
+        policyObj.endDate = parsedDate;
+        policyObj.renewable = "RENEWAL";
+        modified = true;
+      }
+    }
+
+    // Reconstruct start and end dates if they are missing
+    if (!policy.endDate && policy.renewalDate) {
+      policy.endDate = policy.renewalDate;
+      policyObj.endDate = policy.renewalDate;
+      modified = true;
+    }
+    if (!policy.startDate && policy.endDate) {
+      const computedStart = new Date(policy.endDate);
+      computedStart.setFullYear(computedStart.getFullYear() - 1);
+      computedStart.setDate(computedStart.getDate() + 1);
+      policy.startDate = computedStart;
+      policyObj.startDate = computedStart;
+      modified = true;
+    }
+    if (policy.tpPremium && !policy.tpStartDate && policy.startDate) {
+      policy.tpStartDate = policy.startDate;
+      policyObj.tpStartDate = policy.startDate;
+      modified = true;
+    }
+    if (policy.odPremium && !policy.odStartDate && policy.startDate) {
+      policy.odStartDate = policy.startDate;
+      policyObj.odStartDate = policy.startDate;
+      modified = true;
+    }
+    if (policy.tpPremium && !policy.tpEndDate && policy.endDate) {
+      policy.tpEndDate = policy.endDate;
+      policyObj.tpEndDate = policy.endDate;
+      modified = true;
+    }
+    if (policy.odPremium && !policy.odEndDate && policy.endDate) {
+      policy.odEndDate = policy.endDate;
+      policyObj.odEndDate = policy.endDate;
+      modified = true;
+    }
+
+    if (modified) {
+      await policy.save();
+    }
+
     res.status(200).json({
       success: true,
-      data: policy,
+      data: policyObj,
     });
   } catch (error) {
     console.error("Get policy by ID Error:", error);
@@ -430,10 +505,8 @@ const importCsv = async (req, res) => {
       return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    // console.log("row", rows);
-
     const toLowerSafe = (val) =>
-      typeof val === "string" ? val.toLowerCase().trim() : val;
+      val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
 
     const insDepartments = await insDepartmentModel.find(
       {},
@@ -457,68 +530,240 @@ const importCsv = async (req, res) => {
     }));
 
     const products = await ProductOrServiceCategorymodel.find({});
+    const financialYears = await financialYearModel.find({});
+
+    const findFinancialYearId = (fyStr) => {
+      if (!fyStr) return undefined;
+      const cleanStr = String(fyStr).replace(/\s+/g, "");
+      const match = cleanStr.match(/^(\d{4})/);
+      if (match) {
+        const startYear = parseInt(match[1], 10);
+        const fyDoc = financialYears.find(fy => {
+          const fyStart = new Date(fy.fromDate).getFullYear();
+          return fyStart === startYear;
+        });
+        if (fyDoc) return fyDoc._id;
+      }
+      return undefined;
+    };
 
     const excelDateToJSDate = (excelDate) => {
       if (!excelDate) return null;
-      // Excel date starts from 1900-01-01
+      if (typeof excelDate === "string") {
+        if (/^\d+(\.\d+)?$/.test(excelDate.trim())) {
+          return new Date(Math.round((Number(excelDate) - 25569) * 86400 * 1000));
+        }
+        const parsed = new Date(excelDate);
+        if (!isNaN(parsed.getTime())) return parsed;
+        const parts = excelDate.split(/[-/]/);
+        if (parts.length === 3) {
+          if (parts[2].length === 4) {
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+          } else if (parts[0].length === 4) {
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+          }
+        }
+        return null;
+      }
       return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
     };
 
-    const policyDetailsArray = rows.map((row) => ({
-      financialYear: row["Financial Year"] || "",
-      companyId: "68ca95091d6a9cc2b96ae263",
-      branchCode: "695386ca12bb6dd679ffa330",
-      branchName: "NAGPUR",
-      brokerName: "6964ceed36ec87f56adc1332",
-      branchBroker: "6964b3a4b2343d2e611ea796",
-      cutomerName: row["INSURED NAME"]?.trim() || "",
-      clientType: toLowerSafe(row["CUSTOMER TYPE"]), // RETAIL → retail
-      mobile: row["MOBILE NO"] || "",
-      email: row["MAIL ID"] || "",
-      renewable: row["RENEWAL/ROLLOVER"],
-      vehicleModel: row["MAKE/MODEL"] || "",
-      policyNumber: String(row["POLICY NUMBER"] || "").trim(),
-      odPremium: Number(row["OD PREMIUM"]) || 0,
-      tpPremium: Number(row["TP PREMIUM "]) || 0,
-      netPremium: Number(row["NET PREMIUM"]) || 0,
-      totalAmount: Number(row["TOTAL PREMIUM ( WITH GST )"]) || 0,
-      renewalDate: excelDateToJSDate(row["EXPIRED DATE"]),
-      insDepartment: departmentMap[toLowerSafe(row["DEPARTMENT"])] || "",
+    const getValueByPossibleKeys = (row, ...keys) => {
+      const cleanKeys = keys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      for (const rowKey of Object.keys(row)) {
+        const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanKeys.includes(cleanRowKey)) {
+          return row[rowKey];
+        }
+      }
+      for (const rowKey of Object.keys(row)) {
+        const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+        for (const cleanK of cleanKeys) {
+          if (cleanRowKey.includes(cleanK) || cleanK.includes(cleanRowKey)) {
+            return row[rowKey];
+          }
+        }
+      }
+      return undefined;
+    };
 
-      product:
-        products.find(
-          (p) =>
-            toLowerSafe(p.productName) === toLowerSafe(row["PRODUCT TYPE"]),
-        )?._id || "",
+    const policyDetailsArray = [];
 
-      insCompany:
-        companyList.find(
-          (c) => c.key === toLowerSafe(row["COMPANY"]).slice(0, 4),
-        )?._id || "",
+    const existingCustomers = await CustomerRegistrationModel.find({});
+    const existingGroups = await customerGroupModel.find({});
+    const gstPercentages = await GstPercentageModel.find({});
 
-      insurerName:
-        companyList.find(
-          (c) => c.key === toLowerSafe(row["COMPANY"]).slice(0, 4),
-        )?.name || row["COMPANY"],
-      tpEndDate:
-        Number(row["TP PREMIUM "]) > 0
-          ? excelDateToJSDate(row["EXPIRED DATE"])
-          : "",
-      odEndDate:
-        Number(row["OD PREMIUM "]) > 0
-          ? excelDateToJSDate(row["EXPIRED DATE"])
-          : "",
-      endDate: excelDateToJSDate(row["EXPIRED DATE"]) || "",
-      vehicleNumber: row["VEHICLE NO"] || "",
-      paymentMode: row["PAYMENT MODE"],
-      paidAmount: Number(row["TOTAL PREMIUM ( WITH GST )"]) || 0,
-      gstNo: row["GST/UDYOG AADHAAR"] || "",
-    }));
+    const customerMap = existingCustomers.reduce((map, cust) => {
+      map[toLowerSafe(cust.name)] = cust._id;
+      return map;
+    }, {});
 
-    // console.log(
-    //   "-----------------------------------------------------------------------",
-    // );
-    // console.log("PolicyData ", policyDetailsArray);
+    const groupMap = existingGroups.reduce((map, gp) => {
+      map[toLowerSafe(gp.customerGroupName)] = gp._id;
+      return map;
+    }, {});
+
+    const existingPolicies = await policyDetailModel.find({}, { policyNumber: 1 });
+    const existingPolicyNumbers = new Set(
+      existingPolicies
+        .map((p) => String(p.policyNumber || "").trim().toLowerCase())
+        .filter((p) => p !== "")
+    );
+    const seenInFile = new Set();
+
+    for (const row of rows) {
+      const rawPolicyNumber = getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "";
+      const policyNumber = String(rawPolicyNumber).trim();
+      const policyNumberKey = policyNumber.toLowerCase();
+
+      if (policyNumberKey) {
+        if (existingPolicyNumbers.has(policyNumberKey) || seenInFile.has(policyNumberKey)) {
+          console.log(`Skipping duplicate policy: ${policyNumber}`);
+          continue;
+        }
+        seenInFile.add(policyNumberKey);
+      }
+
+      const clientType = toLowerSafe(getValueByPossibleKeys(row, "CUSTOMER TYPE", "CLIENT TYPE")) || "retail";
+      const insuredName = String(getValueByPossibleKeys(row, "INSURED NAME", "CUSTOMER NAME", "CLIENT NAME") || "").trim();
+      const mobile = String(getValueByPossibleKeys(row, "MOBILE NO", "MOBILE", "PHONE") || "").trim();
+      const email = String(getValueByPossibleKeys(row, "MAIL ID", "EMAIL") || "").trim();
+      const gstNo = getValueByPossibleKeys(row, "GST/UDYOG AADHAAR", "GST NO", "GSTIN") || "";
+
+      let retailCustomer = undefined;
+      let customerGroup = undefined;
+
+      if (insuredName) {
+        const insuredNameKey = toLowerSafe(insuredName);
+        if (clientType === "corporate") {
+          if (groupMap[insuredNameKey]) {
+            customerGroup = groupMap[insuredNameKey];
+          } else {
+            const newGroup = new customerGroupModel({
+              companyId: "68ca95091d6a9cc2b96ae263",
+              customerGroupName: insuredName,
+              email: email,
+              mobile: mobile,
+              gstNo: gstNo,
+            });
+            const savedGroup = await newGroup.save();
+            customerGroup = savedGroup._id;
+            groupMap[insuredNameKey] = savedGroup._id;
+          }
+        } else {
+          // Default/retail
+          if (customerMap[insuredNameKey]) {
+            retailCustomer = customerMap[insuredNameKey];
+          } else {
+            const newCustomer = new CustomerRegistrationModel({
+              customerType: "retail",
+              name: insuredName,
+              email: email,
+              mobile: mobile,
+              gstNo: gstNo,
+            });
+            const savedCustomer = await newCustomer.save();
+            retailCustomer = savedCustomer._id;
+            customerMap[insuredNameKey] = savedCustomer._id;
+          }
+        }
+      }
+
+      const odPremium = Number(getValueByPossibleKeys(row, "OD PREMIUM")) || 0;
+      const tpPremium = Number(getValueByPossibleKeys(row, "TP PREMIUM", "TP PREMIUM ")) || 0;
+      const netPremium = Number(getValueByPossibleKeys(row, "NET PREMIUM")) || 0;
+      const totalAmount = Number(getValueByPossibleKeys(row, "TOTAL PREMIUM ( WITH GST )", "TOTAL PREMIUM", "TOTAL AMOUNT", "GROSS PREMIUM")) || 0;
+      const gstAmount = Math.max(0, totalAmount - netPremium);
+
+      const gstRate = netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 0;
+      const gstDoc = gstPercentages.find(g => Math.round(g.value) === gstRate);
+      const gstId = gstDoc?._id || undefined;
+
+      const tpGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0;
+      const odGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0;
+      const tpAmount = tpPremium + tpGstAmount;
+      const odAmount = odPremium + odGstAmount;
+
+      const expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "RENEWAL/ROLLOVER"));
+
+      let startDate = excelDateToJSDate(getValueByPossibleKeys(row, "START DATE", "INCEPTION DATE", "POLICY START DATE", "EFFECTIVE DATE"));
+      if (!startDate && expiredDate) {
+        startDate = new Date(expiredDate);
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        startDate.setDate(startDate.getDate() + 1);
+      }
+
+      const tpStartDate = tpPremium > 0 ? startDate : undefined;
+      const odStartDate = odPremium > 0 ? startDate : undefined;
+
+      const transactionDate = startDate ? new Date(startDate) : undefined;
+      if (transactionDate) {
+        transactionDate.setDate(transactionDate.getDate() - 2);
+      }
+
+      const companyVal = toLowerSafe(getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY"));
+      const matchedCompany = companyList.find((c) => {
+        const cleanCompany = toLowerSafe(c.name);
+        return cleanCompany.includes(companyVal) || companyVal.includes(cleanCompany) || c.key === companyVal.slice(0, 4);
+      });
+      const insCompanyId = matchedCompany?._id || undefined;
+      const insurerName = matchedCompany?.name || getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY") || "";
+
+      const deptVal = toLowerSafe(getValueByPossibleKeys(row, "DEPARTMENT", "DEPT"));
+      const insDepartmentId = departmentMap[deptVal] || undefined;
+
+      const prodVal = toLowerSafe(getValueByPossibleKeys(row, "PRODUCT TYPE", "PRODUCT"));
+      const productId = products.find((p) => toLowerSafe(p.productName) === prodVal)?._id || undefined;
+
+      policyDetailsArray.push({
+        financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")),
+        companyId: "68ca95091d6a9cc2b96ae263",
+        branchCode: "695386ca12bb6dd679ffa330",
+        branchName: "NAGPUR",
+        brokerName: "6964ceed36ec87f56adc1332",
+        branchBroker: "6964b3a4b2343d2e611ea796",
+        cutomerName: insuredName,
+        clientType,
+        retailCustomer,
+        customerGroup,
+        mobile,
+        email,
+        renewable: getValueByPossibleKeys(row, "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
+        vehicleModel: getValueByPossibleKeys(row, "MAKE/MODEL", "MODEL") || "",
+        policyNumber: String(getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "").trim(),
+        odPremium,
+        tpPremium,
+        netPremium,
+        gstAmount,
+        totalAmount,
+        renewalDate: expiredDate,
+        insDepartment: insDepartmentId,
+        product: productId,
+        insCompany: insCompanyId,
+        insurerName,
+        tpEndDate: tpPremium > 0 ? expiredDate : undefined,
+        odEndDate: odPremium > 0 ? expiredDate : undefined,
+        endDate: expiredDate || undefined,
+        startDate: startDate || undefined,
+        tpStartDate,
+        odStartDate,
+        transactionDate,
+        gst: gstId,
+        tpGst: tpPremium > 0 ? gstId : undefined,
+        odGst: odPremium > 0 ? gstId : undefined,
+        tpGstAmount,
+        odGstAmount,
+        tpAmount,
+        odAmount,
+        policyDuration: "YEARLY",
+        tpPolicyDuration: tpPremium > 0 ? "YEARLY" : undefined,
+        odPolicyDuration: odPremium > 0 ? "YEARLY" : undefined,
+        vehicleNumber: getValueByPossibleKeys(row, "VEHICLE NO", "VEHICLE NUMBER") || "",
+        paymentMode: getValueByPossibleKeys(row, "PAYMENT MODE") || "online",
+        paidAmount: totalAmount,
+        gstNo,
+      });
+    }
 
     let insertedDocs = [];
     let failedDocs = [];
@@ -557,15 +802,9 @@ const importCsv = async (req, res) => {
     }
   } catch (e) {
     console.error(e);
-    insertedDocs = error.insertedDocs || [];
-    failedDocs = error.writeErrors.map((e) => ({
-      index: e.index,
-      error: e.errmsg,
-      document: policyDetailsArray[e.index],
-    }));
     return res
       .status(500)
-      .json({ STATUS: false, error: e.message, failedDocs: failedDocs });
+      .json({ success: false, error: e.message });
   }
 };
 
@@ -597,7 +836,8 @@ const exportCsv = async (req, res) => {
       .populate("subCustomerGroup")
       .populate("branchCode")
       .populate("branchBroker")
-      .populate("brokerName");
+      .populate("brokerName")
+      .populate("endorsementGst");
 
     const exportData = policyData.map((p) => {
       const obj = p.toObject();
@@ -613,6 +853,8 @@ const exportCsv = async (req, res) => {
         product: obj.product?.productName || "",
         subProduct: obj.subProduct?.subProductName || "",
         retailCustomer: obj.retailCustomer?.name || "",
+        customerGroup: obj.customerGroup?.groupName || obj.customerGroup?.name || "",
+        subCustomerGroup: obj.subCustomerGroup?.subCustomerGroup || obj.subCustomerGroup?.name || "",
         gst: obj.gst?.value || "",
         tpGst: obj.tpGst?.value || "",
         odGst: obj.odGst?.value || "",
@@ -644,6 +886,7 @@ const exportCsv = async (req, res) => {
       { label: "Show Nominee", value: "showNominee" },
       { label: "Nominee Name", value: "nomineeName" },
       { label: "Nominee Relation", value: "nomineeRelation" },
+      { label: "Nominee Contact", value: "nomineeContact" },
       { label: "Insurance Department", value: "insDepartment" },
       { label: "Product", value: "product" },
       { label: "Sub Product", value: "subProduct" },
@@ -748,15 +991,164 @@ const exportCsv = async (req, res) => {
         value: "totalBrokerageAmountincGst",
       },
     ];
+    const excelData = exportData.map((row) => {
+      const mappedRow = {};
+      csvFields.forEach((field) => {
+        mappedRow[field.label] = row[field.value] !== undefined ? row[field.value] : "";
+      });
+      return mappedRow;
+    });
 
-    const csvParser = new CsvParser({ fields: csvFields });
-    const csvData = csvParser.parse(exportData);
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", "attachment; filename=policies.csv");
-    res.status(200).end(csvData);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    XLSX.utils.book_append_sheet(wb, ws, "Policies");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=policies.xlsx");
+    res.status(200).send(buffer);
   } catch (error) {
     console.error("Error exporting CSV:", error);
     res.status(500).send("An error occurred while exporting the data.");
+  }
+};
+
+const sendReminder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { templateId, variables, mobile } = req.body;
+
+    const policy = await policyDetailModel.findById(id)
+      .populate("retailCustomer")
+      .populate("customerGroup");
+
+    if (!policy) {
+      return res.status(404).json({ success: false, message: "Policy not found" });
+    }
+
+    // Increment count
+    policy.messageCount = (policy.messageCount || 0) + 1;
+    await policy.save();
+
+    // Prepare customer name
+    let customerName = policy.cutomerName || "";
+    if (!customerName && policy.retailCustomer) {
+      customerName = policy.retailCustomer.name;
+    }
+    if (!customerName && policy.customerGroup) {
+      customerName = policy.customerGroup.groupName || policy.customerGroup.name;
+    }
+    if (!customerName) {
+      customerName = "Valued Customer";
+    }
+
+    const DLT_TEMPLATES = {
+      "1707171229475133470": {
+        text: "Dear Sir / Madam\nYour Vehicle Policy No {var1} for vehicle No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229478113200": {
+        text: "Dear Sir / Madam\nYour Vehicle Policy No {var1} for vehicle No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229481145664": {
+        text: "Dear Sir / Madam\nYour {var1} Policy No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171229847086671": {
+        text: "Dear Sir / Madam\nYour {var1} is due for Renewal on {var2} which has not yet been renewed as per our records. Please renew it immediately\nContact us\n7507553335, 7757825335 \nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171705453558611": {
+        text: "Dear Sir / Madam\nYour {var1} Policy No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records. Please renew it immediately\nContact us\n7507553335, 7757825335 \nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154526920734": {
+        text: "Dear Sir / Madam\nYour Private Car Policy No {var1} for vehicle No {var2} is due for Renewal on {var3}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154531182881": {
+        text: "Dear Sir / Madam\nYour Mediclaim Policy No {var1} is due for Renewal on {var2}\nKindly renew the policy before expiry for continuous coverage\nPlease don't hesitate to contact us\n7507553335, 7757825335\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154535303724": {
+        text: "Reminder\nDear Sir / Madam\nYour Private Car Policy No {var1} for vehicle No {var2} is due for Renewal on {var3} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      },
+      "1707171154539354305": {
+        text: "Reminder\nDear Sir / Madam\nYour Mediclaim Policy No {var1} due for Renewal on {var2} which has not yet been renewed as per our records.\nPlease renew it immediately\nContact us\n7507553335, 7757825335\nIf policy renewed, please ignore the message.\nRegards\nNitin Jeswani\nJP Insurance Brokers"
+      }
+    };
+
+    let compiledMessage = "";
+    const targetMobile = mobile || policy.mobile || "";
+
+    if (templateId && DLT_TEMPLATES[templateId]) {
+      let templateText = DLT_TEMPLATES[templateId].text;
+      if (Array.isArray(variables)) {
+        variables.forEach((val, idx) => {
+          templateText = templateText.replace(new RegExp(`\\{var${idx + 1}\\}`, 'g'), val || "");
+        });
+      }
+      compiledMessage = templateText;
+    } else {
+      // Fallback message
+      const policyNumber = policy.policyNumber || "N/A";
+      const expiryDate = policy.endDate ? new Date(policy.endDate).toLocaleDateString('en-GB') : "N/A";
+      compiledMessage = `Dear Sir / Madam\nYour Policy No ${policyNumber} is due for Renewal on ${expiryDate}.\nKindly renew the policy before expiry for continuous coverage.\nRegards\nJP Insurance Brokers`;
+    }
+
+    console.log(`[SMS/Text Message Triggered] To: ${targetMobile}, Template: ${templateId || "Fallback"}, Message: ${compiledMessage}`);
+
+    let apiSuccess = false;
+    let apiResponse = null;
+
+    if (targetMobile) {
+      try {
+        const apikey = "6605155b543da";
+        const route = "transactional";
+        const sender = "JPINBR";
+        const dltentityid = "1501333130000043941";
+        
+        // Build API URL
+        const apiUrl = `http://commnestsms.com/api/push.json?apikey=${apikey}&route=${route}&sender=${sender}&mobileno=${targetMobile}&text=${encodeURIComponent(compiledMessage)}&dltentityid=${dltentityid}${templateId ? `&dlttemplateid=${templateId}` : ''}`;
+        
+        const response = await axios.get(apiUrl);
+        apiResponse = response.data;
+        apiSuccess = true;
+        console.log(`[SMS/Text Message API Success] Response:`, apiResponse);
+      } catch (apiError) {
+        console.error("Error calling CommNest API:", apiError.message);
+        apiResponse = { error: apiError.message };
+      }
+    }
+
+    // Create or update RenewalReminder entry
+    const policyNumber = policy.policyNumber || "N/A";
+    let existingReminder = await RenewalReminder.findOne({ policyId: id });
+    if (existingReminder) {
+      existingReminder.customerName = customerName;
+      existingReminder.contactNo = targetMobile;
+      existingReminder.email = policy.email || "";
+      existingReminder.reminderDate = new Date();
+      existingReminder.status = "active";
+      await existingReminder.save();
+    } else {
+      await RenewalReminder.create({
+        policyId: id,
+        customerName: customerName,
+        contactNo: targetMobile,
+        email: policy.email || "",
+        policyNo: policyNumber,
+        endDate: policy.endDate || new Date(),
+        reminderDate: new Date(),
+        reminderDays: 7,
+        status: "active"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: apiSuccess ? "Reminder message sent successfully" : "Reminder compiled but gateway call failed",
+      messageCount: policy.messageCount,
+      dummyMessage: compiledMessage,
+      apiResponse
+    });
+  } catch (error) {
+    console.error("Error sending reminder:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -770,4 +1162,5 @@ module.exports = {
   getPolicyDetailByFY,
   importCsv,
   exportCsv,
+  sendReminder,
 };

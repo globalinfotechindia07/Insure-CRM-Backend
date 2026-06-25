@@ -32,17 +32,36 @@ const postProductOrServiceCategory = async (req, res) => {
       });
     }
 
+    // Check for duplicate
+    const existingCategory = await ProductOrServiceCategorymodel.findOne({
+      companyId,
+      productName: { $regex: new RegExp(`^${productName.trim()}$`, "i") },
+      $or: [
+        { department: department },
+        { insDepartment: department }
+      ]
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        status: false,
+        message: "Product category already exists for this department",
+      });
+    }
+
     const newCategory = new ProductOrServiceCategorymodel({
       companyId,
       productName,
       department,  // Changed from insDepartment to department
+      insDepartment: department, // Save to insDepartment as well
     });
 
     await newCategory.save();
 
     // Populate the department data before sending response
     const populatedCategory = await ProductOrServiceCategorymodel.findById(newCategory._id)
-      .populate("department", "name");  // Populate department with name field
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName");  // Populate both fields
 
     res.status(201).json({
       status: true,
@@ -74,7 +93,8 @@ const getProductOrServiceCategory = async (req, res) => {
     const categories = await ProductOrServiceCategorymodel.find({
       companyId: new mongoose.Types.ObjectId(companyId),
     })
-      .populate("department", "name")  // Populate department with name field
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName")  // Populate both fields
       .sort({ createdAt: -1 });
 
     if (!categories || categories.length === 0) {
@@ -118,13 +138,18 @@ const putProductOrServiceCategory = async (req, res) => {
     // Build update object
     const updateData = {};
     if (productName) updateData.productName = productName;
-    if (department) updateData.department = department;
+    if (department) {
+      updateData.department = department;
+      updateData.insDepartment = department;
+    }
 
     const updatedCategory = await ProductOrServiceCategorymodel.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate("department", "name");
+    )
+      .populate("department", "name departmentName department")
+      .populate("insDepartment", "insDepartment name departmentName");
 
     console.log("Updated category:", updatedCategory);
 

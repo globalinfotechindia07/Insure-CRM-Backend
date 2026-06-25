@@ -43,59 +43,10 @@ const createCustomerRegistration = async (req, res) => {
       city,
       state,
       contactPerson,
+      authorisedPersonName,
+      authorisedPersonContact,
+      authorisedPersonEmail,
     } = req.body;
-
-    // 🔍 Basic validation for required fields
-    const requiredFields = [
-      { field: name, name: "name" },
-      { field: mobile, name: "mobile" },
-      { field: email, name: "email" }
-    ];
-
-    const missingFields = requiredFields.filter(item => !item.field || item.field.trim() === "");
-    
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Required fields missing: ${missingFields.map(f => f.name).join(", ")}`,
-      });
-    }
-
-    // Check for duplicate mobile number
-    const existingMobile = await CustomerRegistrationModel.findOne({ mobile });
-    if (existingMobile) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer with this mobile number already exists",
-      });
-    }
-
-    // Check for duplicate email
-    const existingEmail = await CustomerRegistrationModel.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer with this email already exists",
-      });
-    }
-
-    // Validate email format
-    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid email address",
-      });
-    }
-
-    // Validate mobile number (10 digits)
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(mobile)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid 10-digit mobile number",
-      });
-    }
 
     // Generate customer ID if not provided
     let finalCustomerId = customerId;
@@ -103,39 +54,17 @@ const createCustomerRegistration = async (req, res) => {
       finalCustomerId = await generateCustomerId();
     }
 
-    // Validate PAN card format if provided
-    if (panNo && panNo.trim() !== "") {
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-      if (!panRegex.test(panNo.toUpperCase())) {
-        return res.status(400).json({
-          success: false,
-          message: "Please provide a valid PAN card number",
-        });
-      }
-    }
-
-    // Validate GST format if provided
-    if (gstNo && gstNo.trim() !== "") {
-      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-      if (!gstRegex.test(gstNo.toUpperCase())) {
-        return res.status(400).json({
-          success: false,
-          message: "Please provide a valid GST number",
-        });
-      }
-    }
-
     // create newCustomerRegistration object
     const newCustomerRegistration = new CustomerRegistrationModel({
       customerType: clientType || "Individual",
       customerId: finalCustomerId,
       prefix: prefix || "",
-      name: name.trim(),
-      customerGroupName: customerGroupName || "",
+      name: name ? name.trim() : "",
+      customerGroupName: (customerGroupName && customerGroupName.trim() !== "") ? customerGroupName : undefined,
       dob: dob || null,
       doj: doj || new Date(),
-      email: email.toLowerCase().trim(),
-      mobile: mobile.trim(),
+      email: email ? email.toLowerCase().trim() : "",
+      mobile: mobile ? mobile.trim() : "",
       panNo: panNo ? panNo.toUpperCase().trim() : "",
       aadharNo: aadharNo || "",
       drivingLicenseNo: drivingLicenseNo || "",
@@ -151,6 +80,9 @@ const createCustomerRegistration = async (req, res) => {
         email: person?.email?.toLowerCase().trim() ?? "",
         phone: person?.phone?.trim() ?? "",
       })) || [],
+      authorisedPersonName: authorisedPersonName || "",
+      authorisedPersonContact: authorisedPersonContact || "",
+      authorisedPersonEmail: authorisedPersonEmail ? authorisedPersonEmail.toLowerCase().trim() : "",
     });
     
     await newCustomerRegistration.save();
@@ -324,20 +256,6 @@ const updateCustomerRegistration = async (req, res) => {
       });
     }
     
-    // Check for duplicate mobile (excluding current customer)
-    if (updateData.mobile && updateData.mobile !== existingCustomer.mobile) {
-      const duplicateMobile = await CustomerRegistrationModel.findOne({
-        mobile: updateData.mobile,
-        _id: { $ne: id }
-      });
-      if (duplicateMobile) {
-        return res.status(400).json({
-          success: false,
-          message: "Customer with this mobile number already exists",
-        });
-      }
-    }
-    
     // Update contact persons if provided
     if (updateData.contactPerson) {
       updateData.contactPersons = updateData.contactPerson.map((person) => ({
@@ -348,6 +266,10 @@ const updateCustomerRegistration = async (req, res) => {
         phone: person?.phone?.trim() ?? "",
       }));
       delete updateData.contactPerson;
+    }
+
+    if (updateData.customerGroupName === "") {
+      updateData.customerGroupName = null;
     }
     
     const updatedCustomer = await CustomerRegistrationModel.findByIdAndUpdate(

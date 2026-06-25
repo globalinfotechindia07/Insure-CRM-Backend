@@ -293,10 +293,10 @@ const getLeadControllerById = async (req, res) => {
     const { id } = req.params;
     const lead = await leadModel
       .findById(id)
-      .populate("Prospect", "companyName")
+      .populate("Prospect", "companyName email mobileNumber alternateMobileNumber address pincode city state country")
       .populate("reference", "LeadReference")
-      .populate("productService", "productName")
-      .populate("leadstatus", "LeadStatus") // <-- fixed field name
+      .populate("productService", "subProductName")
+      .populate("leadstatus", "LeadStatus colorCode")
       .populate("leadType", "LeadType")
       .populate(
         "assignTo",
@@ -347,6 +347,9 @@ const updateLeadController = async (req, res) => {
       }
     });
 
+    // Reset lead status to Active so the updated leadstatus renders correctly in the list.
+    updateData.status = "Active";
+
     // Update only provided fields; $set ensures only changed fields are updated.
     const updatedLead = await leadModel
       .findByIdAndUpdate(
@@ -354,10 +357,10 @@ const updateLeadController = async (req, res) => {
         { $set: updateData },
         { new: true, runValidators: true }
       )
-      .populate("Prospect", "companyName")
+      .populate("Prospect", "companyName email mobileNumber alternateMobileNumber address pincode city state country")
       .populate("Client", "companyName clientName")
       .populate("reference", "LeadReference")
-      .populate("productService", "productName")
+      .populate("productService", "subProductName")
       .populate("leadstatus", "LeadStatus colorCode")
       .populate("leadType", "LeadType")
       .populate(

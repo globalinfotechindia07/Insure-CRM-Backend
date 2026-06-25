@@ -15,7 +15,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://mirai.isyncerp.com",
-  "https://insure.isyncerp.com",
+  "https://insure.isyncerp.com", 
   "https://jpinsurancebroker.co.in",
   "http://miraicrm.com",
 ];
@@ -23,7 +23,7 @@ const allowedOrigins = [
 
 // Add this line - very important!
 // ✅ Add this line - Static file serving for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));app.use("/api/uploads", express.static("public/images"));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); app.use("/api/uploads", express.static("public/images"));
 
 app.use(
   cors({

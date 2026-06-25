@@ -16,7 +16,7 @@ const customerSchema = new mongoose.Schema(
 
     customerName: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
 
@@ -41,6 +41,9 @@ const customerSchema = new mongoose.Schema(
     city: String,
 
     state: String,
+    authorisedPersonName: String,
+    authorisedPersonContact: String,
+    authorisedPersonEmail: String,
   },
   { timestamps: true }
 );

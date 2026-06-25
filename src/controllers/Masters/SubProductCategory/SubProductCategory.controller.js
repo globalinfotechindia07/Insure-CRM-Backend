@@ -85,6 +85,19 @@ const postSubProductCategoryController = async (req, res) => {
       });
     }
 
+    const existingSubCategory = await SubProductCategoryModel.findOne({
+      companyId,
+      productName,
+      subProductName: { $regex: new RegExp(`^${subProductName.trim()}$`, "i") }
+    });
+
+    if (existingSubCategory) {
+      return res.status(400).json({
+        status: "false",
+        message: "Sub product category already exists under this product",
+      });
+    }
+
     const newSubCategory = new SubProductCategoryModel({
       productName,
       companyId,

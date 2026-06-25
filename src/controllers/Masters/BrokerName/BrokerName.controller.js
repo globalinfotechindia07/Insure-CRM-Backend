@@ -34,6 +34,16 @@ const postBrokerNameController = async (req, res) => {
         .status(400)
         .json({ status: "false", message: " Broker Name is required" });
     }
+    const existingBroker = await brokerNameModel.findOne({
+      companyId,
+      brokerName: { $regex: new RegExp(`^${brokerName.trim()}$`, "i") }
+    });
+    if (existingBroker) {
+      return res.status(400).json({
+        status: "false",
+        message: "Broker Name already exists",
+      });
+    }
     const newInsDepartment = new brokerNameModel({
       brokerName,
       companyId: new mongoose.Types.ObjectId(companyId),

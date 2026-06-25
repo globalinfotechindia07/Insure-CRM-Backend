@@ -80,6 +80,7 @@ policyDetailRouter.get("/byFY", policyDetailControllers.getPolicyDetailByFY);
 policyDetailRouter.get("/:id", policyDetailControllers.getPolicyDetailById);
 policyDetailRouter.get("/count", policyDetailControllers.getPolicyCount);
 policyDetailRouter.post("/", policyDetailControllers.postPolicyDetail);
+policyDetailRouter.post("/send-reminder/:id", policyDetailControllers.sendReminder);
 policyDetailRouter.put("/:id", policyDetailControllers.updatePolicyDetail);
 policyDetailRouter.delete("/:id", policyDetailControllers.deletePolicyDetail);
 

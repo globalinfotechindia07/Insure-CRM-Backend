@@ -76,6 +76,9 @@ const policyDetailSchema = new mongoose.Schema(
     nomineeRelation: {
       type: String,
     },
+    nomineeContact: {
+      type: String,
+    },
     insDepartment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "insDepartment",
@@ -304,6 +307,14 @@ const policyDetailSchema = new mongoose.Schema(
     endorsementNetPremium: {
       type: Number,
     },
+    endorsementGst: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "GstPercentage",
+      set: (v) => (v === "" ? null : v),
+    },
+    endorsementGstAmount: {
+      type: Number,
+    },
     paymentMode: {
       type: String,
     },
@@ -365,6 +376,16 @@ const policyDetailSchema = new mongoose.Schema(
     },
     totalBrokerageAmountincGst: {
       type: Number,
+    },
+    sharePercentage: {
+      type: Number,
+    },
+    coBrokerageAmount: {
+      type: Number,
+    },
+    messageCount: {
+      type: Number,
+      default: 0,
     },
     createdBy: mongoose.Types.ObjectId,
   },

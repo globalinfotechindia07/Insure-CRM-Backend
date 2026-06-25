@@ -17,8 +17,10 @@ const locationSchemaExp = new mongoose.Schema({
   gstNo: { type: String }
 });
 
-const companySettingsSchema = new mongoose.Schema({
-  companyName: { type: String, trim: true },
+const branchSettingsSchema = new mongoose.Schema({
+  // Use alias so branchName maps to companyName in the database
+  companyName: { type: String, trim: true, alias: 'branchName' },
+  
   email: { type: String, lowercase: true, trim: true },
   mobileNumber: { type: String, trim: true },
   alternateMobileNumber: { type: String, trim: true },
@@ -30,11 +32,12 @@ const companySettingsSchema = new mongoose.Schema({
   state: { type: String, trim: true },
   city: { type: String, trim: true },
   
-  // ✅ Store logo path as string (relative path)
+  // Use alias so branchLogo maps to companyLogo in the database
   companyLogo: { 
     type: String,
     default: null,
-    trim: true
+    trim: true,
+    alias: 'branchLogo'
   },
   
   // ✅ refId as String (not ObjectId)
@@ -52,18 +55,20 @@ const companySettingsSchema = new mongoose.Schema({
   }
 }, { 
   timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toJSON: { virtuals: true, getters: true },
+  toObject: { virtuals: true, getters: true }
 });
 
 // ✅ Virtual field for full logo URL
-companySettingsSchema.virtual('logoUrl').get(function() {
-  if (!this.companyLogo) return null;
-  if (this.companyLogo.startsWith('http')) return this.companyLogo;
-  if (this.companyLogo.startsWith('/uploads')) return this.companyLogo;
-  return `/uploads/company-logo/${this.companyLogo}`;
+branchSettingsSchema.virtual('logoUrl').get(function() {
+  const logo = this.companyLogo;
+  if (!logo) return null;
+  if (logo.startsWith('http')) return logo;
+  if (logo.startsWith('/uploads')) return logo;
+  return `/uploads/company-logo/${logo}`;
 });
 
-const companySettingsModel = mongoose.model('companySettings', companySettingsSchema);
+// ✅ Explicitly target the existing 'companySettings' collection to preserve data
+const branchSettingsModel = mongoose.model('branchSettings', branchSettingsSchema, 'companySettings');
 
-module.exports = companySettingsModel;
+module.exports = branchSettingsModel;
