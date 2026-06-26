@@ -5,7 +5,7 @@ const {
   postProductOrServiceCategory,
   putProductOrServiceCategory,
   deleteProductOrServiceCategory,
-} = require("../../controllers/Masters/ProductOrServiceCategory/ProductOrServiceCategory.controller");
+} = require("../../controllers/Masters/productOrServiceCategory/productOrServiceCategory.controller");
 const { handleToken } = require('../../utils/handleToken');
 
 // ================= PRODUCT/SERVICE CATEGORY ROUTES =================
