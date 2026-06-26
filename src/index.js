@@ -8,60 +8,123 @@ const path = require("path");
 const socketIO = require("socket.io");
 const http = require("http");
 const { initilizeSocket } = require("./utils/socket");
+
 const app = express();
 
-// ✅ Middleware he
-// app.use(cors({ origin: "*", credentials: true, optionSuccessStatus: 200 }));
+// ==============================
+// Allowed Origins
+// ==============================
 const allowedOrigins = [
   "http://localhost:3000",
+  "http://localhost:5173",
+
+  "https://insure-crm-frontend.vercel.app", // ✅ Your Vercel Frontend
+
   "https://mirai.isyncerp.com",
-  "https://insure.isyncerp.com", 
+  "https://insure.isyncerp.com",
   "https://jpinsurancebroker.co.in",
   "http://miraicrm.com",
 ];
 
+// ==============================
+// CORS Configuration
+// ==============================
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow Postman, mobile apps, server-to-server requests
+    if (!origin) {
+      return callback(null, true);
+    }
 
-// Add this line - very important!
-// ✅ Add this line - Static file serving for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); app.use("/api/uploads", express.static("public/images"));
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  }),
-);
+    console.log("❌ Blocked by CORS:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
 
+  credentials: true,
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+  ],
+};
+
+app.use(cors(corsOptions));
+
+// Handle Preflight Requests
+app.options("*", cors(corsOptions));
+
+// ==============================
+// Body Parser
+// ==============================
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Static Files & Routes
+// ==============================
+// Static Files
+// ==============================
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
+
+app.use(
+  "/api/uploads",
+  express.static(path.join(__dirname, "public/images"))
+);
+
+app.use(
+  "/api/images",
+  express.static(path.join(__dirname, "public/images"))
+);
+
+// ==============================
+// Test Route
+// ==============================
 app.get("/", (req, res) => {
   res.send("✅ CRM Backend is running");
 });
 
+// ==============================
+// API Routes
+// ==============================
 app.use("/api", routes);
 
-
-const imagesPath = path.join(__dirname, "/public/images");
-app.use("/api/images", express.static(imagesPath));
-
-// ✅ Create server from Express
+// ==============================
+// Create HTTP Server
+// ==============================
 const server = http.createServer(app);
+
+// ==============================
+// Socket Initialization
+// ==============================
 initilizeSocket(server);
-// ✅ Start Server
+
+// ==============================
+// Start Server
+// ==============================
 server.listen(process.env.port, async () => {
   try {
     await connection;
+
     console.log("✅ Connected to Mongo Atlas");
-    console.log(`🚀 Server started on port ${process.env.port}`);
+    console.log(`🚀 Server running on Port ${process.env.port}`);
   } catch (err) {
-    console.log("❌ MongoDB connection error:", err.message);
+    console.log("❌ MongoDB Connection Error:", err.message);
   }
 });
