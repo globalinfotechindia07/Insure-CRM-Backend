@@ -229,3 +229,4 @@ module.exports.branchSettingsModel = require("./BranchSettings/BranchSettings.mo
 module.exports.InvoiceModel = require("./Invoice/invoice.model");
 
 module.exports.TicketManageModel = require("./TicketManagement/TicketManagement.model");
+module.exports.CompanyModel = require("./Company");
