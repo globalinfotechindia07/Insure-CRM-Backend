@@ -4,13 +4,17 @@ const { insCompanyModel } = require("../../../models/index");
 const getInsCompanyController = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const insCompanys = await insCompanyModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    });
+    let query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    } else if (companyId) {
+      // If companyId is passed but is invalid, return empty array
+      return res.status(200).json({ status: "true", data: [] });
+    }
+
+    const insCompanys = await insCompanyModel.find(query);
     if (!insCompanys || insCompanys.length === 0) {
-      return res
-        .status(404)
-        .json({ status: "false", message: "No Insurance Company found" });
+      return res.status(200).json({ status: "true", data: [] });
     }
     // sort data from newest to oldest
     insCompanys.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

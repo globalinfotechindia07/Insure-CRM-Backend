@@ -3,26 +3,30 @@ const { insDepartmentModel } = require("../../../models/index");
 
 const getInsDepartmentController = async (req, res) => {
   try {
-    const { companyId } = req.query;
-    const insDepartments = await insDepartmentModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    });
-    if (!insDepartments || insDepartments.length === 0) {
-      return res
-        .status(404)
-        .json({ status: "false", message: "No Insurance Departments found" });
-    }
-    // sort data from newest to oldest
-    insDepartments.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+     const { companyId } = req.query;
+     let query = {};
+     if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+       query.companyId = new mongoose.Types.ObjectId(companyId);
+     } else if (companyId) {
+       // If companyId is passed but is invalid, return empty array
+       return res.status(200).json({ status: "true", data: [] });
+     }
 
-    res.status(200).json({ status: "true", data: insDepartments });
+     const insDepartments = await insDepartmentModel.find(query);
+     if (!insDepartments || insDepartments.length === 0) {
+       return res.status(200).json({ status: "true", data: [] });
+     }
+     // sort data from newest to oldest
+     insDepartments.sort(
+       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+     );
+
+     res.status(200).json({ status: "true", data: insDepartments });
   } catch (error) {
-    res.status(500).json({
-      status: "false",
-      message: ["Error fetching positions", error.message],
-    });
+     res.status(500).json({
+       status: "false",
+       message: ["Error fetching departments", error.message],
+     });
   }
 };
 
