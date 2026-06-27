@@ -631,6 +631,44 @@ const deletePolicyDetail = async (req, res) => {
       return res.status(404).json({ message: "Policy Details not found" });
     }
 
+    // If customer fetched from policy management, and has no other remaining policies, delete the customer too
+    if (deletedPolicyDetail.retailCustomer) {
+      const remainingCount = await policyDetailModel.countDocuments({
+        retailCustomer: deletedPolicyDetail.retailCustomer
+      });
+      if (remainingCount === 0) {
+        try {
+          const customerReg = await CustomerRegistrationModel.findById(deletedPolicyDetail.retailCustomer);
+          if (customerReg) {
+            await CustomerRegistrationModel.findByIdAndDelete(deletedPolicyDetail.retailCustomer);
+            if (customerReg.customerId) {
+              await Customer.deleteOne({ customerId: customerReg.customerId });
+            }
+          }
+        } catch (err) {
+          console.error("Error cleaning up retail customer on policy delete:", err);
+        }
+      }
+    }
+
+    // Clean up corporate customer group if no other policies exist for it
+    if (deletedPolicyDetail.customerGroup) {
+      const remainingCount = await policyDetailModel.countDocuments({
+        customerGroup: deletedPolicyDetail.customerGroup
+      });
+      if (remainingCount === 0) {
+        try {
+          const group = await customerGroupModel.findById(deletedPolicyDetail.customerGroup);
+          if (group) {
+            await customerGroupModel.findByIdAndDelete(deletedPolicyDetail.customerGroup);
+            await Customer.deleteOne({ clientType: "corporate", customerName: group.customerGroupName });
+          }
+        } catch (err) {
+          console.error("Error cleaning up customer group on policy delete:", err);
+        }
+      }
+    }
+
     return res
       .status(200)
       .json({ status: "true", message: "Policy Details deleted" });
