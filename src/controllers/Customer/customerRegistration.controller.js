@@ -126,10 +126,10 @@ const createCustomerRegistration = async (req, res) => {
 //get all customer registration details
 const getAllCustomerRegistration = async (req, res) => {
   try {
-    // Add pagination support
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    // Add pagination support - only if explicitly provided in query
+    const hasPagination = req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? (parseInt(req.query.page) || 1) : null;
+    const limit = hasPagination ? (parseInt(req.query.limit) || 10) : null;
     
     // Add search functionality
     const search = req.query.search || "";
@@ -152,26 +152,34 @@ const getAllCustomerRegistration = async (req, res) => {
       searchFilter.customerType = customerType;
     }
     
-    // Fetch customer registration data with pagination
-    const customerRegistration = await CustomerRegistrationModel.find(searchFilter)
-      .sort({ createdAt: -1 }) // sort from newest to oldest
-      .skip(skip)
-      .limit(limit);
+    // Fetch customer registration data
+    let customerRegistration;
+    let totalCount;
     
-    // Get total count for pagination
-    const totalCount = await CustomerRegistrationModel.countDocuments(searchFilter);
+    if (hasPagination) {
+      const skip = (page - 1) * limit;
+      customerRegistration = await CustomerRegistrationModel.find(searchFilter)
+        .sort({ createdAt: -1 }) // sort from newest to oldest for lists
+        .skip(skip)
+        .limit(limit);
+      totalCount = await CustomerRegistrationModel.countDocuments(searchFilter);
+    } else {
+      customerRegistration = await CustomerRegistrationModel.find(searchFilter)
+        .sort({ name: 1 }); // sort alphabetically for dropdowns
+      totalCount = customerRegistration.length;
+    }
     
     if (!customerRegistration || customerRegistration.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No customer registrations found",
         data: [],
-        pagination: {
+        pagination: hasPagination ? {
           total: 0,
           page,
           limit,
           totalPages: 0
-        }
+        } : undefined
       });
     }
     
@@ -179,14 +187,14 @@ const getAllCustomerRegistration = async (req, res) => {
       success: true,
       message: "Customer registrations fetched successfully",
       data: customerRegistration,
-      pagination: {
+      pagination: hasPagination ? {
         total: totalCount,
         page,
         limit,
         totalPages: Math.ceil(totalCount / limit),
         hasNextPage: page < Math.ceil(totalCount / limit),
         hasPrevPage: page > 1
-      }
+      } : undefined
     });
   } catch (error) {
     console.error("Error fetching customer registrations:", error);
