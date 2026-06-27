@@ -3,6 +3,7 @@ const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearMod
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
 const RenewalReminder = require("../../models/renewalReminder.model");
 const axios = require("axios");
+const Customer = require("../../models/Customer");
 
 const csv = require("csvtojson");
 const XLSX = require("xlsx");
@@ -112,6 +113,131 @@ const getPolicyDetail = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
+};
+
+const ensureCustomerExists = async (body, companyId) => {
+  const toLowerSafe = (val) =>
+    val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
+
+  const clientType = toLowerSafe(body.clientType) || "retail";
+  const cutomerName = String(body.cutomerName || "").trim();
+  const mobile = String(body.mobile || "").trim();
+  const email = String(body.email || "").trim();
+  const gstNo = String(body.gstNo || "").trim();
+
+  if (!cutomerName) {
+    return { retailCustomer: body.retailCustomer, customerGroup: body.customerGroup };
+  }
+
+  const insuredNameKey = toLowerSafe(cutomerName);
+  let retailCustomer = body.retailCustomer || undefined;
+  let customerGroup = body.customerGroup || undefined;
+
+  if (clientType === "corporate") {
+    let existingGroup = null;
+    if (customerGroup && mongoose.Types.ObjectId.isValid(customerGroup)) {
+      existingGroup = await customerGroupModel.findById(customerGroup);
+    }
+    
+    if (!existingGroup) {
+      existingGroup = await customerGroupModel.findOne({
+        customerGroupName: { $regex: new RegExp(`^${cutomerName}$`, "i") }
+      });
+    }
+
+    if (existingGroup) {
+      customerGroup = existingGroup._id;
+    } else {
+      const newGroup = new customerGroupModel({
+        companyId: companyId || "68ca95091d6a9cc2b96ae263",
+        customerGroupName: cutomerName,
+        email: email,
+        mobile: mobile,
+        gstNo: gstNo,
+        createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined
+      });
+      const savedGroup = await newGroup.save();
+      customerGroup = savedGroup._id;
+
+      // Sync with Customer Master
+      try {
+        const legacyCustomer = new Customer({
+          clientType: "corporate",
+          customerId: "GRP" + Date.now(),
+          customerName: cutomerName,
+          email: email,
+          mobile: mobile,
+          gst: gstNo
+        });
+        await legacyCustomer.save();
+      } catch (err) {
+        console.error("Error saving corporate group to Customer Master:", err);
+      }
+    }
+  } else {
+    let existingCustomer = null;
+    if (retailCustomer && mongoose.Types.ObjectId.isValid(retailCustomer)) {
+      existingCustomer = await CustomerRegistrationModel.findById(retailCustomer);
+    }
+    
+    if (!existingCustomer) {
+      const matchConditions = [
+        { name: { $regex: new RegExp(`^${cutomerName}$`, "i") } }
+      ];
+      if (mobile) {
+        matchConditions.push({ mobile: mobile });
+      }
+      if (email) {
+        matchConditions.push({ email: email.toLowerCase() });
+      }
+      existingCustomer = await CustomerRegistrationModel.findOne({
+        $or: matchConditions
+      });
+    }
+
+    if (existingCustomer) {
+      retailCustomer = existingCustomer._id;
+    } else {
+      const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
+      let nextId = "CUST001";
+      if (lastCustomer && lastCustomer.customerId) {
+        const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
+        if (!isNaN(lastNum)) {
+          nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
+        }
+      }
+
+      const newCustomer = new CustomerRegistrationModel({
+        customerType: "retail",
+        customerId: nextId,
+        name: cutomerName,
+        email: email,
+        mobile: mobile,
+        gstNo: gstNo,
+        doj: new Date(),
+        createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined
+      });
+      const savedCustomer = await newCustomer.save();
+      retailCustomer = savedCustomer._id;
+
+      // Sync with Customer Master
+      try {
+        const legacyCustomer = new Customer({
+          clientType: "retail",
+          customerId: nextId,
+          customerName: cutomerName,
+          email: email,
+          mobile: mobile,
+          gst: gstNo
+        });
+        await legacyCustomer.save();
+      } catch (err) {
+        console.error("Error saving retail customer to Customer Master:", err);
+      }
+    }
+  }
+
+  return { retailCustomer, customerGroup };
 };
 
 const postPolicyDetail = async (req, res) => {
@@ -228,12 +354,14 @@ const postPolicyDetail = async (req, res) => {
 
     const { companyId } = req.query;
 
+    const resolved = await ensureCustomerExists(req.body, companyId);
+
     // 📝 Create new AdminClientRegistration document
     const newPolicyDetail = new policyDetailModel({
       financialYear: req.body.financialYear || undefined,
       clientType: req.body.clientType || undefined,
-      retailCustomer: req.body.retailCustomer || undefined,
-      customerGroup: req.body.customerGroup || undefined,
+      retailCustomer: resolved.retailCustomer || undefined,
+      customerGroup: resolved.customerGroup || undefined,
       subCustomerGroup: req.body.subCustomerGroup || undefined,
       checkSubGroup: req.body.checkSubGroup || undefined,
       branchCode: req.body.branchCode || undefined,
@@ -441,6 +569,31 @@ const updatePolicyDetail = async (req, res) => {
     if (!policyId || !mongoose.Types.ObjectId.isValid(policyId)) {
       return res.status(400).json({ message: "Valid Policy ID is required" });
     }
+
+    const existingPolicy = await policyDetailModel.findById(policyId);
+    if (!existingPolicy) {
+      return res.status(404).json({ message: "Policy not found" });
+    }
+    const companyId = existingPolicy.companyId || req.query.companyId;
+    
+    // Resolve/create customer if necessary
+    const resolved = await ensureCustomerExists({
+      clientType: updateData.clientType || existingPolicy.clientType,
+      cutomerName: updateData.cutomerName !== undefined ? updateData.cutomerName : existingPolicy.cutomerName,
+      mobile: updateData.mobile !== undefined ? updateData.mobile : existingPolicy.mobile,
+      email: updateData.email !== undefined ? updateData.email : existingPolicy.email,
+      gstNo: updateData.gstNo !== undefined ? updateData.gstNo : existingPolicy.gstNo,
+      retailCustomer: updateData.retailCustomer || existingPolicy.retailCustomer,
+      customerGroup: updateData.customerGroup || existingPolicy.customerGroup,
+    }, companyId);
+
+    if (resolved.retailCustomer) {
+      updateData.retailCustomer = resolved.retailCustomer;
+    }
+    if (resolved.customerGroup) {
+      updateData.customerGroup = resolved.customerGroup;
+    }
+
     // Update only provided fields; $set ensures only changed fields are updated.
     const updatedPolicyDetail = await policyDetailModel.findByIdAndUpdate(
       policyId,
@@ -649,14 +802,39 @@ const importCsv = async (req, res) => {
             const savedGroup = await newGroup.save();
             customerGroup = savedGroup._id;
             groupMap[insuredNameKey] = savedGroup._id;
+
+            // Sync with Customer Master
+            try {
+              const legacyCustomer = new Customer({
+                clientType: "corporate",
+                customerId: "GRP" + Date.now(),
+                customerName: insuredName,
+                email: email,
+                mobile: mobile,
+                gst: gstNo
+              });
+              await legacyCustomer.save();
+            } catch (err) {
+              console.error("Error saving corporate group to Customer Master during import:", err);
+            }
           }
         } else {
           // Default/retail
           if (customerMap[insuredNameKey]) {
             retailCustomer = customerMap[insuredNameKey];
           } else {
+            const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
+            let nextId = "CUST001";
+            if (lastCustomer && lastCustomer.customerId) {
+              const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
+              if (!isNaN(lastNum)) {
+                nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
+              }
+            }
+
             const newCustomer = new CustomerRegistrationModel({
               customerType: "retail",
+              customerId: nextId,
               name: insuredName,
               email: email,
               mobile: mobile,
@@ -665,6 +843,21 @@ const importCsv = async (req, res) => {
             const savedCustomer = await newCustomer.save();
             retailCustomer = savedCustomer._id;
             customerMap[insuredNameKey] = savedCustomer._id;
+
+            // Sync with Customer Master
+            try {
+              const legacyCustomer = new Customer({
+                clientType: "retail",
+                customerId: nextId,
+                customerName: insuredName,
+                email: email,
+                mobile: mobile,
+                gst: gstNo
+              });
+              await legacyCustomer.save();
+            } catch (err) {
+              console.error("Error saving retail customer to Customer Master during import:", err);
+            }
           }
         }
       }
