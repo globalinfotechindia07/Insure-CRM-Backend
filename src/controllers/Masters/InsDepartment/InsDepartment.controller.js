@@ -7,9 +7,6 @@ const getInsDepartmentController = async (req, res) => {
      let query = {};
      if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
        query.companyId = new mongoose.Types.ObjectId(companyId);
-     } else if (companyId) {
-       // If companyId is passed but is invalid, return empty array
-       return res.status(200).json({ status: "true", data: [] });
      }
 
      const insDepartments = await insDepartmentModel.find(query);
