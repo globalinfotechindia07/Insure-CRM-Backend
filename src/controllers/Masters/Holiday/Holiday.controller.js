@@ -1,4 +1,36 @@
+const mongoose = require("mongoose");
 const holidayModel = require("../../../models/Masters/Holiday/Holiday.model");
+const holidayTypeModel = require("../../../models/Masters/HolidayType/HolidayType.model");
+
+// Helper to resolve holidayTypeId from either ObjectId or Name
+const resolveHolidayTypeId = async (companyId, value) => {
+  if (!value) return null;
+
+  const cleanedVal = String(value).trim();
+  if (!cleanedVal) return null;
+
+  // Check if it's a valid mongoose ObjectId
+  if (mongoose.Types.ObjectId.isValid(cleanedVal)) {
+    return cleanedVal;
+  }
+
+  // Treat as name: find or create
+  let type = await holidayTypeModel.findOne({
+    companyId,
+    holidayTypeName: { $regex: new RegExp(`^${cleanedVal}$`, "i") }
+  });
+
+  if (!type) {
+    type = new holidayTypeModel({
+      companyId,
+      holidayTypeName: cleanedVal,
+      color: "#1976d2", // default color
+    });
+    await type.save();
+  }
+
+  return type._id;
+};
 
 // Create Holiday
 const createHoliday = async (req, res) => {
@@ -12,9 +44,16 @@ const createHoliday = async (req, res) => {
         .json({ success: false, message: "All fields are required" });
     }
 
+    const resolvedTypeId = await resolveHolidayTypeId(companyId, holidayTypeId);
+    if (!resolvedTypeId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid holiday type" });
+    }
+
     const newHoliday = new holidayModel({
       companyId,
-      holidayTypeId,
+      holidayTypeId: resolvedTypeId,
       holidayName,
       date,
     });
@@ -83,11 +122,31 @@ const getHolidayById = async (req, res) => {
 const updateHoliday = async (req, res) => {
   try {
     const { id } = req.params;
+    const { companyId } = req.query;
     const { holidayTypeId, holidayName, date } = req.body;
+
+    let resolvedCompanyId = companyId;
+    if (!resolvedCompanyId) {
+      const existingHoliday = await holidayModel.findById(id);
+      if (existingHoliday) {
+        resolvedCompanyId = existingHoliday.companyId;
+      }
+    }
+
+    if (!resolvedCompanyId) {
+      return res.status(400).json({ success: false, message: "Company ID is required" });
+    }
+
+    const resolvedTypeId = await resolveHolidayTypeId(resolvedCompanyId, holidayTypeId);
+    if (!resolvedTypeId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid holiday type" });
+    }
 
     const updatedHoliday = await holidayModel.findByIdAndUpdate(
       id,
-      { holidayTypeId, holidayName, date },
+      { holidayTypeId: resolvedTypeId, holidayName, date },
       { new: true }
     );
 
