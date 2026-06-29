@@ -14,10 +14,13 @@ const { Parser: CsvParser } = require("json2csv");
 const getPolicyCount = async (req, res) => {
   try {
     console.log("count contrioller initiated  ");
-    // const { companyId } = req.query;
-    // companyId: new mongoose.Types.ObjectId(companyId),
+    const { companyId } = req.query;
+    const query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    }
 
-    const count = await policyDetailModel.countDocuments({});
+    const count = await policyDetailModel.countDocuments(query);
 
     console.log("response ", count);
 
@@ -35,12 +38,17 @@ const getPolicyCount = async (req, res) => {
 const getPolicyDetailByFY = async (req, res) => {
   try {
     // console.log("API connected... ");
-    const { financialYear } = req.query;
+    const { financialYear, companyId } = req.query;
+
+    const query = {
+      financialYear: new mongoose.Types.ObjectId(financialYear),
+    };
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    }
 
     const policyDetail = await policyDetailModel
-      .find({
-        financialYear: new mongoose.Types.ObjectId(financialYear),
-      })
+      .find(query)
       .populate("insDepartment")
       .populate("insCompany");
     // .populate("ProductOrServiceCategory");
@@ -67,10 +75,12 @@ const getPolicyDetailByFY = async (req, res) => {
 // get policy details
 const getPolicyDetail = async (req, res) => {
   try {
-    const { financialYear, policyNumber } = req.query;
-    // const { companyId } = req.query;
+    const { financialYear, policyNumber, companyId } = req.query;
 
     const query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    }
     if (policyNumber) {
       query.policyNumber = policyNumber;
     } else {
@@ -680,6 +690,7 @@ const deletePolicyDetail = async (req, res) => {
 
 const importCsv = async (req, res) => {
   try {
+    const { companyId } = req.query;
     if (!req.file?.path)
       return res.status(400).json({ error: "No file uploaded" });
 
@@ -831,7 +842,7 @@ const importCsv = async (req, res) => {
             customerGroup = groupMap[insuredNameKey];
           } else {
             const newGroup = new customerGroupModel({
-              companyId: "68ca95091d6a9cc2b96ae263",
+              companyId: companyId || "68ca95091d6a9cc2b96ae263",
               customerGroupName: insuredName,
               email: email,
               mobile: mobile,
@@ -877,6 +888,7 @@ const importCsv = async (req, res) => {
               email: email,
               mobile: mobile,
               gstNo: gstNo,
+              createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined,
             });
             const savedCustomer = await newCustomer.save();
             retailCustomer = savedCustomer._id;
@@ -948,7 +960,7 @@ const importCsv = async (req, res) => {
 
       policyDetailsArray.push({
         financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")),
-        companyId: "68ca95091d6a9cc2b96ae263",
+        companyId: companyId || "68ca95091d6a9cc2b96ae263",
         branchCode: "695386ca12bb6dd679ffa330",
         branchName: "NAGPUR",
         brokerName: "6964ceed36ec87f56adc1332",
