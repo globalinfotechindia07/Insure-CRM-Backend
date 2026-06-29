@@ -16,7 +16,7 @@ const getPolicyCount = async (req, res) => {
     console.log("count contrioller initiated  ");
     const { companyId } = req.query;
     const query = {};
-    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
       query.companyId = new mongoose.Types.ObjectId(companyId);
     }
 
@@ -43,7 +43,7 @@ const getPolicyDetailByFY = async (req, res) => {
     const query = {
       financialYear: new mongoose.Types.ObjectId(financialYear),
     };
-    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
       query.companyId = new mongoose.Types.ObjectId(companyId);
     }
 
@@ -78,7 +78,7 @@ const getPolicyDetail = async (req, res) => {
     const { financialYear, policyNumber, companyId } = req.query;
 
     const query = {};
-    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
       query.companyId = new mongoose.Types.ObjectId(companyId);
     }
     if (policyNumber) {
@@ -143,6 +143,10 @@ const ensureCustomerExists = async (body, companyId) => {
   let retailCustomer = body.retailCustomer || undefined;
   let customerGroup = body.customerGroup || undefined;
 
+  const cleanCompanyId = (companyId && mongoose.Types.ObjectId.isValid(companyId))
+    ? companyId
+    : "68ca95091d6a9cc2b96ae263";
+
   if (clientType === "corporate") {
     let existingGroup = null;
     if (customerGroup && mongoose.Types.ObjectId.isValid(customerGroup)) {
@@ -159,12 +163,12 @@ const ensureCustomerExists = async (body, companyId) => {
       customerGroup = existingGroup._id;
     } else {
       const newGroup = new customerGroupModel({
-        companyId: companyId || "68ca95091d6a9cc2b96ae263",
+        companyId: cleanCompanyId,
         customerGroupName: cutomerName,
         email: email,
         mobile: mobile,
         gstNo: gstNo,
-        createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined
+        createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined
       });
       const savedGroup = await newGroup.save();
       customerGroup = savedGroup._id;
@@ -690,7 +694,11 @@ const deletePolicyDetail = async (req, res) => {
 
 const importCsv = async (req, res) => {
   try {
-    const { companyId } = req.query;
+    const { companyId, financialYear } = req.query;
+    const cleanCompanyId = (companyId && mongoose.Types.ObjectId.isValid(companyId))
+      ? companyId
+      : "68ca95091d6a9cc2b96ae263";
+
     if (!req.file?.path)
       return res.status(400).json({ error: "No file uploaded" });
 
@@ -734,12 +742,29 @@ const importCsv = async (req, res) => {
     const products = await ProductOrServiceCategorymodel.find({});
     const financialYears = await financialYearModel.find({});
 
+    const todayDate = new Date();
+    const currentFYDoc = financialYears.find(fy => {
+      const from = new Date(fy.fromDate);
+      const to = new Date(fy.toDate);
+      return todayDate >= from && todayDate <= to;
+    });
+    const currentFYId = currentFYDoc?._id || undefined;
+
     const findFinancialYearId = (fyStr) => {
       if (!fyStr) return undefined;
       const cleanStr = String(fyStr).replace(/\s+/g, "");
       const match = cleanStr.match(/^(\d{4})/);
       if (match) {
         const startYear = parseInt(match[1], 10);
+        if (financialYear && mongoose.Types.ObjectId.isValid(financialYear)) {
+          const selectedFYDoc = financialYears.find(fy => fy._id.toString() === financialYear.toString());
+          if (selectedFYDoc) {
+            const selectedStartYear = new Date(selectedFYDoc.fromDate).getFullYear();
+            if (selectedStartYear === startYear) {
+              return selectedFYDoc._id;
+            }
+          }
+        }
         const fyDoc = financialYears.find(fy => {
           const fyStart = new Date(fy.fromDate).getFullYear();
           return fyStart === startYear;
@@ -842,7 +867,7 @@ const importCsv = async (req, res) => {
             customerGroup = groupMap[insuredNameKey];
           } else {
             const newGroup = new customerGroupModel({
-              companyId: companyId || "68ca95091d6a9cc2b96ae263",
+              companyId: cleanCompanyId,
               customerGroupName: insuredName,
               email: email,
               mobile: mobile,
@@ -888,7 +913,7 @@ const importCsv = async (req, res) => {
               email: email,
               mobile: mobile,
               gstNo: gstNo,
-              createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined,
+              createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined,
             });
             const savedCustomer = await newCustomer.save();
             retailCustomer = savedCustomer._id;
@@ -959,8 +984,8 @@ const importCsv = async (req, res) => {
       const productId = products.find((p) => toLowerSafe(p.productName) === prodVal)?._id || undefined;
 
       policyDetailsArray.push({
-        financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")),
-        companyId: companyId || "68ca95091d6a9cc2b96ae263",
+        financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")) || (financialYear && mongoose.Types.ObjectId.isValid(financialYear) ? new mongoose.Types.ObjectId(financialYear) : currentFYId),
+        companyId: cleanCompanyId,
         branchCode: "695386ca12bb6dd679ffa330",
         branchName: "NAGPUR",
         brokerName: "6964ceed36ec87f56adc1332",
