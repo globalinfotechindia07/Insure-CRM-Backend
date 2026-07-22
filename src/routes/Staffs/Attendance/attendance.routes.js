@@ -3,6 +3,9 @@ const router = express.Router();
 const {
   CreateAttendance,
   GetAttendance,
+  GetMonthlyAttendanceReport,
+  ExportMonthlyAttendanceReport,
+  ExportMonthlyAttendanceReportCSV
 } = require("../../../controllers/Satffs/Attendance/attendance.controller");
 
 // GET → get attendance (by ?date=2025-10-27 or all)
@@ -10,4 +13,11 @@ router.post("/get", GetAttendance);
 // POST → create or update attendance for a date
 router.post("/", CreateAttendance);
 
+// 📊 Matrix Attendance Report Routes
+router.post("/report", GetMonthlyAttendanceReport);
+router.post("/export-report", ExportMonthlyAttendanceReport);
+router.post("/export-report-csv", ExportMonthlyAttendanceReportCSV);
+
 module.exports = router;
+
+

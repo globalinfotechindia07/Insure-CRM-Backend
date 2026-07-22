@@ -12,8 +12,8 @@ const getDepartmentController = async (req, res) => {
         .status(404)
         .json({ status: "false", message: "No departments found" });
     }
-    // sort data from newest to oldest
-    departments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // sort data alphabetically (A to Z)
+    departments.sort((a, b) => (a.department || '').localeCompare(b.department || ''));
 
     res.status(200).json({ status: "true", data: departments });
   } catch (error) {

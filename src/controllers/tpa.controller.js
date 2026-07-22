@@ -6,6 +6,7 @@ exports.createTPA = async (req, res) => {
 
     const {
       tpaName,
+      contactPerson,
       contactNo,
       email,
       address,
@@ -14,6 +15,7 @@ exports.createTPA = async (req, res) => {
 
     const tpa = await TPA.create({
       tpaName,
+      contactPerson,
       contactNo,
       email,
       address,

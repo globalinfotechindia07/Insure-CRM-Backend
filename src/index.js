@@ -8,7 +8,8 @@ const path = require("path");
 const socketIO = require("socket.io");
 const http = require("http");
 const { initilizeSocket } = require("./utils/socket");
-
+const uppercasePayloadMiddleware = require("./middleware/uppercasePayload.middleware");
+const alphabeticalMasterSortMiddleware = require("./middleware/alphabeticalMasterSort.middleware");
 const app = express();
 
 // ==============================
@@ -74,6 +75,8 @@ app.options("*", cors(corsOptions));
 // ==============================
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(uppercasePayloadMiddleware);
+app.use(alphabeticalMasterSortMiddleware);
 
 // ==============================
 // Static Files
