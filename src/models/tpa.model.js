@@ -9,6 +9,12 @@ const tpaSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Contact Person Name
+    contactPerson: {
+      type: String,
+      trim: true,
+    },
+
     // Contact Number
     contactNo: {
       type: String,

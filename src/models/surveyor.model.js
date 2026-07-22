@@ -5,7 +5,12 @@ const surveyorSchema = new mongoose.Schema(
     // Surveyor Name
     surveyorName: {
       type: String,
-      required: true,
+      trim: true,
+    },
+
+    // Company Name
+    companyName: {
+      type: String,
       trim: true,
     },
 
@@ -33,7 +38,6 @@ const surveyorSchema = new mongoose.Schema(
     // Contact Number
     contactNo: {
       type: String,
-      required: true,
       trim: true,
     },
 
@@ -43,6 +47,15 @@ const surveyorSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+
+    // Dynamic surveyors list
+    surveyors: [
+      {
+        name: { type: String, trim: true },
+        contactNo: { type: String, trim: true },
+        email: { type: String, trim: true, lowercase: true }
+      }
+    ],
 
     // Address
     address: {

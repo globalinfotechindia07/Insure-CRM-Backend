@@ -13,8 +13,8 @@ const getInsCompanyController = async (req, res) => {
     if (!insCompanys || insCompanys.length === 0) {
       return res.status(200).json({ status: "true", data: [] });
     }
-    // sort data from newest to oldest
-    insCompanys.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // sort data alphabetically (A to Z)
+    insCompanys.sort((a, b) => (a.insCompany || '').localeCompare(b.insCompany || ''));
 
     res.status(200).json({ status: "true", data: insCompanys });
   } catch (error) {

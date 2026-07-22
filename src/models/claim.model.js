@@ -8,7 +8,6 @@ const claimSchema = new mongoose.Schema(
 
     claimNo: {
       type: String,
-      required: true,
       trim: true,
     },
 

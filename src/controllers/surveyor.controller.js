@@ -6,22 +6,26 @@ exports.createSurveyor = async (req, res) => {
 
     const {
       surveyorName,
+      companyName,
       licenseNo,
       expiryDate,
       categories,
       contactNo,
       email,
+      surveyors,
       address,
       status,
     } = req.body;
 
     const surveyor = await Surveyor.create({
-      surveyorName,
+      surveyorName: surveyorName || (surveyors && surveyors[0] ? surveyors[0].name : ""),
+      companyName,
       licenseNo,
       expiryDate,
       categories,
-      contactNo,
-      email,
+      contactNo: contactNo || (surveyors && surveyors[0] ? surveyors[0].contactNo : ""),
+      email: email || (surveyors && surveyors[0] ? surveyors[0].email : ""),
+      surveyors,
       address,
       status,
     });
@@ -99,6 +103,12 @@ exports.getSurveyorById = async (req, res) => {
 // UPDATE
 exports.updateSurveyor = async (req, res) => {
   try {
+
+    if (req.body.surveyors && req.body.surveyors.length > 0) {
+      req.body.surveyorName = req.body.surveyors[0].name || "";
+      req.body.contactNo = req.body.surveyors[0].contactNo || "";
+      req.body.email = req.body.surveyors[0].email || "";
+    }
 
     const surveyor =
       await Surveyor.findByIdAndUpdate(
