@@ -1,5 +1,17 @@
 const mongoose = require("mongoose");
 
+const parseNumber = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "number") return isNaN(v) ? null : v;
+  if (typeof v === "string") {
+    const cleaned = v.replace(/,/g, "").trim();
+    if (cleaned === "") return null;
+    const parsed = Number(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return v;
+};
+
 const policyDetailSchema = new mongoose.Schema(
   {
     companyId: {
@@ -163,6 +175,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     sumInsured: {
       type: Number,
+      set: parseNumber,
     },
     renewable: {
       type: String,
@@ -198,6 +211,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     netPremium: {
       type: Number,
+      set: parseNumber,
     },
     gst: {
       type: mongoose.Schema.Types.ObjectId,
@@ -206,6 +220,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     gstAmount: {
       type: Number,
+      set: parseNumber,
     },
     CGST: {
       type: String,
@@ -221,6 +236,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     totalAmount: {
       type: Number,
+      set: parseNumber,
     },
     siteLocation: {
       type: String,
@@ -306,6 +322,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     endorsementNetPremium: {
       type: Number,
+      set: parseNumber,
     },
     endorsementGst: {
       type: mongoose.Schema.Types.ObjectId,
@@ -314,18 +331,21 @@ const policyDetailSchema = new mongoose.Schema(
     },
     endorsementGstAmount: {
       type: Number,
+      set: parseNumber,
     },
     paymentMode: {
       type: String,
     },
     etotalAmount: {
       type: Number,
+      set: parseNumber,
     },
     chequeNo: {
       type: String,
     },
     paidAmount: {
       type: Number,
+      set: parseNumber,
     },
     transactionDate: {
       type: Date,
@@ -343,6 +363,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     amountOnOtherTerr: {
       type: Number,
+      set: parseNumber,
     },
     rateOnTerr: {
       type: mongoose.Schema.Types.ObjectId,
@@ -351,6 +372,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     amountOnTerr: {
       type: Number,
+      set: parseNumber,
     },
     tpBrokerageRate: {
       type: mongoose.Schema.Types.ObjectId,
@@ -359,6 +381,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     tpBrokerageAmount: {
       type: Number,
+      set: parseNumber,
     },
     odBrokerageRate: {
       type: mongoose.Schema.Types.ObjectId,
@@ -367,21 +390,27 @@ const policyDetailSchema = new mongoose.Schema(
     },
     odBrokerageAmount: {
       type: Number,
+      set: parseNumber,
     },
     totalBrokerageAmount: {
       type: Number,
+      set: parseNumber,
     },
     totalBrokerageGst: {
       type: Number,
+      set: parseNumber,
     },
     totalBrokerageAmountincGst: {
       type: Number,
+      set: parseNumber,
     },
     sharePercentage: {
       type: Number,
+      set: parseNumber,
     },
     coBrokerageAmount: {
       type: Number,
+      set: parseNumber,
     },
     messageCount: {
       type: Number,

@@ -256,7 +256,7 @@ const ensureCustomerExists = async (body, companyId) => {
 
 const postPolicyDetail = async (req, res) => {
   try {
-    console.log("📥 Incoming request body:", req.body);
+    // console.log("📥 Incoming request body:", req.body);
 
     const {
       financialYear,

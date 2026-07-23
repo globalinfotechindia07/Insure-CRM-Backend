@@ -97,6 +97,9 @@ app.use(
 );
 
 // ==============================
+const errorHandler = require("./middleware/errorHandler");
+
+// ==============================
 // Test Route
 // ==============================
 app.get("/", (req, res) => {
@@ -107,6 +110,19 @@ app.get("/", (req, res) => {
 // API Routes
 // ==============================
 app.use("/api", routes);
+
+// ==============================
+// 404 & Global Error Handling
+// ==============================
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    status: "false",
+    message: `API Endpoint Not Found - ${req.originalUrl}`
+  });
+});
+
+app.use(errorHandler);
 
 // ==============================
 // Create HTTP Server
