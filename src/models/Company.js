@@ -26,7 +26,6 @@ const companySchema = new mongoose.Schema(
 );
 
 // Create index for better performance
-companySchema.index({ name: 1 });
 companySchema.index({ status: 1 });
 
 const companyModel = mongoose.model("Company", companySchema);
