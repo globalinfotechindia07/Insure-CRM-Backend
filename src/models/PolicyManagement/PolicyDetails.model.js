@@ -418,7 +418,17 @@ const policyDetailSchema = new mongoose.Schema(
     },
     createdBy: mongoose.Types.ObjectId,
   },
-  { timestamps: true },
+  { timestamps: true }
+);
+
+policyDetailSchema.index(
+  { companyId: 1, policyNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      policyNumber: { $exists: true, $type: "string", $gt: "" }
+    }
+  }
 );
 
 const policyDetailModel = mongoose.model("policyDetail", policyDetailSchema);
