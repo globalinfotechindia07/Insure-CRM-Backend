@@ -366,9 +366,45 @@ const postPolicyDetail = async (req, res) => {
       coBrokerageAmount,
     } = req.body;
 
-    const { companyId } = req.query;
+    const cleanCompanyId = companyId || req.body.companyId;
 
-    const resolved = await ensureCustomerExists(req.body, companyId);
+    // 🔍 Duplicate Policy Check
+    const cleanPolicyNo = policyNumber ? String(policyNumber).trim() : "";
+    if (cleanPolicyNo !== "") {
+      const dupQuery = {
+        policyNumber: { $regex: new RegExp(`^${cleanPolicyNo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+      };
+      if (cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId)) {
+        dupQuery.companyId = new mongoose.Types.ObjectId(cleanCompanyId);
+      }
+      const existingPolicy = await policyDetailModel.findOne(dupQuery);
+      if (existingPolicy) {
+        return res.status(400).json({
+          status: "false",
+          success: false,
+          error: `Policy with Policy Number '${cleanPolicyNo}' already exists in the database.`
+        });
+      }
+    } else if (cutomerName && insCompany && startDate) {
+      const dupQuery = {
+        cutomerName: { $regex: new RegExp(`^${String(cutomerName).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") },
+        insCompany: mongoose.Types.ObjectId.isValid(insCompany) ? new mongoose.Types.ObjectId(insCompany) : insCompany,
+        startDate: new Date(startDate)
+      };
+      if (cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId)) {
+        dupQuery.companyId = new mongoose.Types.ObjectId(cleanCompanyId);
+      }
+      const existingPolicy = await policyDetailModel.findOne(dupQuery);
+      if (existingPolicy) {
+        return res.status(400).json({
+          status: "false",
+          success: false,
+          error: "A policy with identical Customer Name, Insurance Company, and Start Date already exists."
+        });
+      }
+    }
+
+    const resolved = await ensureCustomerExists(req.body, cleanCompanyId);
 
     // 📝 Create new AdminClientRegistration document
     const newPolicyDetail = new policyDetailModel({
@@ -608,6 +644,26 @@ const updatePolicyDetail = async (req, res) => {
       updateData.customerGroup = resolved.customerGroup;
     }
 
+    // 🔍 Duplicate Policy Check on update
+    if (updateData.policyNumber && String(updateData.policyNumber).trim() !== "") {
+      const cleanPolicyNo = String(updateData.policyNumber).trim();
+      const dupQuery = {
+        _id: { $ne: policyId },
+        policyNumber: { $regex: new RegExp(`^${cleanPolicyNo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+      };
+      if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+        dupQuery.companyId = new mongoose.Types.ObjectId(companyId);
+      }
+      const existingDuplicate = await policyDetailModel.findOne(dupQuery);
+      if (existingDuplicate) {
+        return res.status(400).json({
+          status: "false",
+          success: false,
+          error: `Policy Number '${cleanPolicyNo}' is already used by another policy.`
+        });
+      }
+    }
+
     // Update only provided fields; $set ensures only changed fields are updated.
     const updatedPolicyDetail = await policyDetailModel.findByIdAndUpdate(
       policyId,
@@ -830,29 +886,56 @@ const importCsv = async (req, res) => {
       return map;
     }, {});
 
-    const existingPolicies = await policyDetailModel.find({}, { policyNumber: 1 });
+    const existingPolicies = await policyDetailModel.find(
+      cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId) ? { companyId: new mongoose.Types.ObjectId(cleanCompanyId) } : {},
+      { policyNumber: 1, cutomerName: 1, insCompany: 1, startDate: 1 }
+    );
     const existingPolicyNumbers = new Set(
       existingPolicies
         .map((p) => String(p.policyNumber || "").trim().toLowerCase())
         .filter((p) => p !== "")
     );
+    const existingComposites = new Set(
+      existingPolicies
+        .map((p) => {
+          const cName = String(p.cutomerName || "").trim().toLowerCase();
+          const comp = String(p.insCompany || "").trim().toLowerCase();
+          const sDate = p.startDate ? new Date(p.startDate).toISOString().split("T")[0] : "";
+          return `${cName}|${comp}|${sDate}`;
+        })
+        .filter((k) => !k.startsWith("||"))
+    );
+
     const seenInFile = new Set();
+    const seenCompositesInFile = new Set();
+    let skippedCount = 0;
 
     for (const row of rows) {
       const rawPolicyNumber = getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "";
       const policyNumber = String(rawPolicyNumber).trim();
       const policyNumberKey = policyNumber.toLowerCase();
 
+      const clientType = toLowerSafe(getValueByPossibleKeys(row, "CUSTOMER TYPE", "CLIENT TYPE")) || "retail";
+      const insuredName = String(getValueByPossibleKeys(row, "INSURED NAME", "CUSTOMER NAME", "CLIENT NAME") || "").trim();
+      const rawStartDate = getValueByPossibleKeys(row, "POLICY START DATE", "START DATE") || "";
+
       if (policyNumberKey) {
         if (existingPolicyNumbers.has(policyNumberKey) || seenInFile.has(policyNumberKey)) {
           console.log(`Skipping duplicate policy: ${policyNumber}`);
+          skippedCount++;
           continue;
         }
         seenInFile.add(policyNumberKey);
+      } else {
+        const compositeKey = `${insuredName.toLowerCase()}|${rawStartDate}`;
+        if (insuredName && (existingComposites.has(compositeKey) || seenCompositesInFile.has(compositeKey))) {
+          console.log(`Skipping duplicate policy without policy number: ${insuredName}`);
+          skippedCount++;
+          continue;
+        }
+        if (insuredName) seenCompositesInFile.add(compositeKey);
       }
 
-      const clientType = toLowerSafe(getValueByPossibleKeys(row, "CUSTOMER TYPE", "CLIENT TYPE")) || "retail";
-      const insuredName = String(getValueByPossibleKeys(row, "INSURED NAME", "CUSTOMER NAME", "CLIENT NAME") || "").trim();
       const mobile = String(getValueByPossibleKeys(row, "MOBILE NO", "MOBILE", "PHONE") || "").trim();
       const email = String(getValueByPossibleKeys(row, "MAIL ID", "EMAIL") || "").trim();
       const gstNo = getValueByPossibleKeys(row, "GST/UDYOG AADHAAR", "GST NO", "GSTIN") || "";
@@ -1044,8 +1127,11 @@ const importCsv = async (req, res) => {
       return res.status(201).json({
         success: true,
         insertedCount: insertedDocs.length,
+        skippedCount,
         failedCount: 0,
-        message: "success",
+        message: skippedCount > 0 
+          ? `Inserted ${insertedDocs.length} records. ${skippedCount} duplicate(s) skipped.`
+          : "Successfully imported all records",
       });
     } catch (e) {
       console.error(e);
@@ -1063,6 +1149,7 @@ const importCsv = async (req, res) => {
       return res.status(207).json({
         success: false,
         insertedCount: insertedDocs.length,
+        skippedCount,
         failedCount: failedDocs.length,
         failedDocs,
         message: "Partial insert completed",
@@ -1077,17 +1164,23 @@ const importCsv = async (req, res) => {
 };
 
 const exportCsv = async (req, res) => {
-  const { financialYear } = req.query;
-
-  // console.log("Inside export controller ", financialYear);
+  const { financialYear, companyId } = req.query;
 
   try {
+    const query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    }
+
+    const clearFY = financialYear?.toString().substring(0, 24);
+    if (clearFY && clearFY.length === 24 && mongoose.Types.ObjectId.isValid(clearFY)) {
+      query.financialYear = new mongoose.Types.ObjectId(clearFY);
+    }
+
     const policyData = await policyDetailModel
-      .find({
-        financialYear: new mongoose.Types.ObjectId(financialYear),
-      })
+      .find(query)
       .populate("insDepartment", "insDepartment")
-      .populate("insCompany", "insCompany")
+      .populate("insCompany", "insCompany name")
       .populate("financialYear")
       .populate("prefix")
       .populate("gst")
@@ -1113,14 +1206,14 @@ const exportCsv = async (req, res) => {
       return {
         ...obj,
         insDepartment: obj.insDepartment?.insDepartment || "",
-        insCompany: obj.insCompany?.insCompany || "",
+        insCompany: obj.insCompany?.insCompany || obj.insCompany?.name || "",
         brokerName: obj.brokerName?.brokerName || "",
         branchBroker: obj.branchBroker?.branchBroker || "",
         branchCode: obj.branchCode?.branchCode || "",
         prefix: obj.prefix?.prefix || "",
         product: obj.product?.productName || "",
         subProduct: obj.subProduct?.subProductName || "",
-        retailCustomer: obj.retailCustomer?.name || "",
+        retailCustomer: obj.retailCustomer?.name || obj.retailCustomer?.cutomerName || "",
         customerGroup: obj.customerGroup?.groupName || obj.customerGroup?.name || "",
         subCustomerGroup: obj.subCustomerGroup?.subCustomerGroup || obj.subCustomerGroup?.name || "",
         gst: obj.gst?.value || "",
@@ -1130,7 +1223,9 @@ const exportCsv = async (req, res) => {
         rateOnOtherTerr: obj.rateOnOtherTerr?.brokerageRate || "",
         tpBrokerageRate: obj.tpBrokerageRate?.brokerageRate || "",
         odBrokerageRate: obj.odBrokerageRate?.brokerageRate || "",
-        financialYear: `${new Date(obj.financialYear?.fromDate).getFullYear()}-${new Date(obj.financialYear?.toDate).getFullYear()}`,
+        financialYear: obj.financialYear?.fromDate && obj.financialYear?.toDate
+          ? `${new Date(obj.financialYear.fromDate).getFullYear()}-${new Date(obj.financialYear.toDate).getFullYear()}`
+          : "",
       };
     });
 
