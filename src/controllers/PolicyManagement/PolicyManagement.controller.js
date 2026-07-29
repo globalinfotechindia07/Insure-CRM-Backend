@@ -75,7 +75,7 @@ const getPolicyDetailByFY = async (req, res) => {
 // get policy details
 const getPolicyDetail = async (req, res) => {
   try {
-    const { financialYear, policyNumber, companyId } = req.query;
+    const { policyNumber, companyId } = req.query;
 
     const query = {};
     if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
@@ -87,25 +87,6 @@ const getPolicyDetail = async (req, res) => {
     }
     if (policyNumber) {
       query.policyNumber = policyNumber;
-    } else {
-      const clearFY = financialYear?.toString().substring(0, 24);
-      if (
-        clearFY &&
-        clearFY.length === 24 &&
-        mongoose.Types.ObjectId.isValid(clearFY)
-      ) {
-        const fyCondition = [
-          { financialYear: new mongoose.Types.ObjectId(clearFY) },
-          { financialYear: null },
-          { financialYear: { $exists: false } }
-        ];
-        if (query.$or) {
-          query.$and = [{ $or: query.$or }, { $or: fyCondition }];
-          delete query.$or;
-        } else {
-          query.$or = fyCondition;
-        }
-      }
     }
 
     const policyDetail = await policyDetailModel
@@ -120,22 +101,14 @@ const getPolicyDetail = async (req, res) => {
       return res.status(200).json({ status: "true", data: [] });
     }
 
-    // Deduplicate policy details by _id and policyNumber
+    // Deduplicate policy details strictly by _id so no distinct document is hidden
     const seenIds = new Set();
-    const seenPolicyNumbers = new Set();
     const uniquePolicies = [];
 
     for (const policy of policyDetail) {
       const idStr = String(policy._id);
       if (seenIds.has(idStr)) continue;
       seenIds.add(idStr);
-
-      const polNo = policy.policyNumber ? String(policy.policyNumber).trim().toLowerCase() : "";
-      if (polNo !== "") {
-        if (seenPolicyNumbers.has(polNo)) continue;
-        seenPolicyNumbers.add(polNo);
-      }
-
       uniquePolicies.push(policy);
     }
 
@@ -1184,7 +1157,7 @@ const importCsv = async (req, res) => {
 };
 
 const exportCsv = async (req, res) => {
-  const { financialYear, companyId } = req.query;
+  const { companyId } = req.query;
 
   try {
     const query = {};
@@ -1194,21 +1167,6 @@ const exportCsv = async (req, res) => {
         { companyId: null },
         { companyId: { $exists: false } }
       ];
-    }
-
-    const clearFY = financialYear?.toString().substring(0, 24);
-    if (clearFY && clearFY.length === 24 && mongoose.Types.ObjectId.isValid(clearFY)) {
-      const fyCondition = [
-        { financialYear: new mongoose.Types.ObjectId(clearFY) },
-        { financialYear: null },
-        { financialYear: { $exists: false } }
-      ];
-      if (query.$or) {
-        query.$and = [{ $or: query.$or }, { $or: fyCondition }];
-        delete query.$or;
-      } else {
-        query.$or = fyCondition;
-      }
     }
 
     const policyData = await policyDetailModel

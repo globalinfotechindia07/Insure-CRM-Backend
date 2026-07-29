@@ -1,6 +1,6 @@
 const express = require("express");
 const policyDetailRouter = express.Router();
-const { policyDetailControllers } = require("../../controllers/index");
+const policyDetailControllers = require("../../controllers/PolicyManagement/PolicyManagement.controller.js");
 const fs = require("fs");
 
 const { handleToken } = require("../../utils/handleToken");
