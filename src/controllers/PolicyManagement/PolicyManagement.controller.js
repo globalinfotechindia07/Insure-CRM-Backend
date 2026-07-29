@@ -1077,17 +1077,23 @@ const importCsv = async (req, res) => {
 };
 
 const exportCsv = async (req, res) => {
-  const { financialYear } = req.query;
-
-  // console.log("Inside export controller ", financialYear);
+  const { financialYear, companyId } = req.query;
 
   try {
+    const query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
+      query.companyId = new mongoose.Types.ObjectId(companyId);
+    }
+
+    const clearFY = financialYear?.toString().substring(0, 24);
+    if (clearFY && clearFY.length === 24 && mongoose.Types.ObjectId.isValid(clearFY)) {
+      query.financialYear = new mongoose.Types.ObjectId(clearFY);
+    }
+
     const policyData = await policyDetailModel
-      .find({
-        financialYear: new mongoose.Types.ObjectId(financialYear),
-      })
+      .find(query)
       .populate("insDepartment", "insDepartment")
-      .populate("insCompany", "insCompany")
+      .populate("insCompany", "insCompany name")
       .populate("financialYear")
       .populate("prefix")
       .populate("gst")
@@ -1113,14 +1119,14 @@ const exportCsv = async (req, res) => {
       return {
         ...obj,
         insDepartment: obj.insDepartment?.insDepartment || "",
-        insCompany: obj.insCompany?.insCompany || "",
+        insCompany: obj.insCompany?.insCompany || obj.insCompany?.name || "",
         brokerName: obj.brokerName?.brokerName || "",
         branchBroker: obj.branchBroker?.branchBroker || "",
         branchCode: obj.branchCode?.branchCode || "",
         prefix: obj.prefix?.prefix || "",
         product: obj.product?.productName || "",
         subProduct: obj.subProduct?.subProductName || "",
-        retailCustomer: obj.retailCustomer?.name || "",
+        retailCustomer: obj.retailCustomer?.name || obj.retailCustomer?.cutomerName || "",
         customerGroup: obj.customerGroup?.groupName || obj.customerGroup?.name || "",
         subCustomerGroup: obj.subCustomerGroup?.subCustomerGroup || obj.subCustomerGroup?.name || "",
         gst: obj.gst?.value || "",
@@ -1130,7 +1136,9 @@ const exportCsv = async (req, res) => {
         rateOnOtherTerr: obj.rateOnOtherTerr?.brokerageRate || "",
         tpBrokerageRate: obj.tpBrokerageRate?.brokerageRate || "",
         odBrokerageRate: obj.odBrokerageRate?.brokerageRate || "",
-        financialYear: `${new Date(obj.financialYear?.fromDate).getFullYear()}-${new Date(obj.financialYear?.toDate).getFullYear()}`,
+        financialYear: obj.financialYear?.fromDate && obj.financialYear?.toDate
+          ? `${new Date(obj.financialYear.fromDate).getFullYear()}-${new Date(obj.financialYear.toDate).getFullYear()}`
+          : "",
       };
     });
 
