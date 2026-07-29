@@ -1189,12 +1189,26 @@ const exportCsv = async (req, res) => {
   try {
     const query = {};
     if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
-      query.companyId = new mongoose.Types.ObjectId(companyId);
+      query.$or = [
+        { companyId: new mongoose.Types.ObjectId(companyId) },
+        { companyId: null },
+        { companyId: { $exists: false } }
+      ];
     }
 
     const clearFY = financialYear?.toString().substring(0, 24);
     if (clearFY && clearFY.length === 24 && mongoose.Types.ObjectId.isValid(clearFY)) {
-      query.financialYear = new mongoose.Types.ObjectId(clearFY);
+      const fyCondition = [
+        { financialYear: new mongoose.Types.ObjectId(clearFY) },
+        { financialYear: null },
+        { financialYear: { $exists: false } }
+      ];
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: fyCondition }];
+        delete query.$or;
+      } else {
+        query.$or = fyCondition;
+      }
     }
 
     const policyData = await policyDetailModel
@@ -1374,7 +1388,27 @@ const exportCsv = async (req, res) => {
         value: "totalBrokerageAmountincGst",
       },
     ];
-    const excelData = exportData.map((row) => {
+
+    // Deduplicate export records
+    const seenIds = new Set();
+    const seenPolicyNumbers = new Set();
+    const uniqueExportData = [];
+
+    for (const row of exportData) {
+      const idStr = String(row._id);
+      if (seenIds.has(idStr)) continue;
+      seenIds.add(idStr);
+
+      const polNo = row.policyNumber ? String(row.policyNumber).trim().toLowerCase() : "";
+      if (polNo !== "") {
+        if (seenPolicyNumbers.has(polNo)) continue;
+        seenPolicyNumbers.add(polNo);
+      }
+
+      uniqueExportData.push(row);
+    }
+
+    const excelData = uniqueExportData.map((row) => {
       const mappedRow = {};
       csvFields.forEach((field) => {
         mappedRow[field.label] = row[field.value] !== undefined ? row[field.value] : "";
