@@ -79,7 +79,11 @@ const getPolicyDetail = async (req, res) => {
 
     const query = {};
     if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
-      query.companyId = new mongoose.Types.ObjectId(companyId);
+      query.$or = [
+        { companyId: new mongoose.Types.ObjectId(companyId) },
+        { companyId: null },
+        { companyId: { $exists: false } }
+      ];
     }
     if (policyNumber) {
       query.policyNumber = policyNumber;
@@ -90,11 +94,17 @@ const getPolicyDetail = async (req, res) => {
         clearFY.length === 24 &&
         mongoose.Types.ObjectId.isValid(clearFY)
       ) {
-        query.$or = [
+        const fyCondition = [
           { financialYear: new mongoose.Types.ObjectId(clearFY) },
           { financialYear: null },
           { financialYear: { $exists: false } }
         ];
+        if (query.$or) {
+          query.$and = [{ $or: query.$or }, { $or: fyCondition }];
+          delete query.$or;
+        } else {
+          query.$or = fyCondition;
+        }
       }
     }
 
@@ -105,21 +115,31 @@ const getPolicyDetail = async (req, res) => {
       .populate("retailCustomer")
       .populate("customerGroup")
       .sort({ createdAt: -1 });
-    // .populate("ProductOrServiceCategory");
-    // .populate("financialYear");
-
-    // console.log("------------------------------------------", policyDetail);
 
     if (!policyDetail || policyDetail.length === 0) {
       return res.status(200).json({ status: "true", data: [] });
     }
 
-    // // sort data from newest to oldest
-    // policyDetail.sort(
-    //   (a, b) => new Date(b.createdAt) - new Date(a.createdAt), // b is newer, a is older
-    // );
+    // Deduplicate policy details by _id and policyNumber
+    const seenIds = new Set();
+    const seenPolicyNumbers = new Set();
+    const uniquePolicies = [];
 
-    return res.status(200).json({ status: "true", data: policyDetail });
+    for (const policy of policyDetail) {
+      const idStr = String(policy._id);
+      if (seenIds.has(idStr)) continue;
+      seenIds.add(idStr);
+
+      const polNo = policy.policyNumber ? String(policy.policyNumber).trim().toLowerCase() : "";
+      if (polNo !== "") {
+        if (seenPolicyNumbers.has(polNo)) continue;
+        seenPolicyNumbers.add(polNo);
+      }
+
+      uniquePolicies.push(policy);
+    }
+
+    return res.status(200).json({ status: "true", data: uniquePolicies });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
