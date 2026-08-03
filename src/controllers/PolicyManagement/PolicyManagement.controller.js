@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearModel, CustomerRegistrationModel, customerGroupModel, GstPercentageModel } = require("../../models/index");
+const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearModel, CustomerRegistrationModel, customerGroupModel, GstPercentageModel, PrefixModel, SubProductCategoryModel, brokerBranch, brokerNameModel, branchBrokerModel, fuelTypeModel, otherAddonModel, endorsementModel, brokerageRateModel, incotermsModel, subCustomerGroupModel } = require("../../models/index");
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
 const RenewalReminder = require("../../models/renewalReminder.model");
 const axios = require("axios");
@@ -764,32 +764,59 @@ const importCsv = async (req, res) => {
       return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    const toLowerSafe = (val) =>
-      val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
+    const toLowerSafe = (val) => val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
 
-    const insDepartments = await insDepartmentModel.find(
-      {},
-      { _id: 1, insDepartment: 1 },
-    );
+    // Parallel fetch for all masters
+    const [
+      insDepartments, insCompany, products, financialYears, existingCustomers, existingGroups, gstPercentages,
+      prefixes, subProducts, branches, brokerNames, branchBrokers, fuelTypes, otherAddons, endorsements, brokerageRates, incoterms, subCustomerGroups
+    ] = await Promise.all([
+      insDepartmentModel.find({}, { _id: 1, insDepartment: 1 }),
+      insCompanyModel.find({}, { _id: 1, insCompany: 1 }),
+      ProductOrServiceCategorymodel.find({}),
+      financialYearModel.find({}),
+      CustomerRegistrationModel.find({}),
+      customerGroupModel.find({}),
+      GstPercentageModel.find({}),
+      PrefixModel ? PrefixModel.find({}) : Promise.resolve([]),
+      SubProductCategoryModel ? SubProductCategoryModel.find({}) : Promise.resolve([]),
+      brokerBranch ? brokerBranch.find({}) : Promise.resolve([]),
+      brokerNameModel ? brokerNameModel.find({}) : Promise.resolve([]),
+      branchBrokerModel ? branchBrokerModel.find({}) : Promise.resolve([]),
+      fuelTypeModel ? fuelTypeModel.find({}) : Promise.resolve([]),
+      otherAddonModel ? otherAddonModel.find({}) : Promise.resolve([]),
+      endorsementModel ? endorsementModel.find({}) : Promise.resolve([]),
+      brokerageRateModel ? brokerageRateModel.find({}) : Promise.resolve([]),
+      incotermsModel ? incotermsModel.find({}) : Promise.resolve([]),
+      subCustomerGroupModel ? subCustomerGroupModel.find({}) : Promise.resolve([])
+    ]);
 
-    const departmentMap = insDepartments.reduce((map, dept) => {
-      map[toLowerSafe(dept.insDepartment)] = dept._id;
+    const buildMap = (arr, keyField) => arr.reduce((map, item) => {
+      if (item && item[keyField]) map[toLowerSafe(item[keyField])] = item._id;
       return map;
     }, {});
 
-    const insCompany = await insCompanyModel.find(
-      {},
-      { _id: 1, insCompany: 1 },
-    );
+    const departmentMap = buildMap(insDepartments, "insDepartment");
+    const prefixMap = buildMap(prefixes, "prefix");
+    const subProductMap = buildMap(subProducts, "subProductCategoryName"); // Assuming field name
+    const branchMap = buildMap(branches, "branchName");
+    const brokerNameMap = buildMap(brokerNames, "brokerName");
+    const branchBrokerMap = buildMap(branchBrokers, "branchBrokerName");
+    const fuelTypeMap = buildMap(fuelTypes, "fuelType");
+    const otherAddonMap = buildMap(otherAddons, "otherAddon");
+    const endorsementMap = buildMap(endorsements, "endorsementName");
+    const brokerageRateMap = buildMap(brokerageRates, "rate"); // Assuming field name
+    const incotermsMap = buildMap(incoterms, "incoterms");
+    const subCustomerGroupMap = buildMap(subCustomerGroups, "subCustomerGroupName");
+
+    const customerMap = buildMap(existingCustomers, "name");
+    const groupMap = buildMap(existingGroups, "customerGroupName");
 
     const companyList = insCompany.map((c) => ({
       key: toLowerSafe(c.insCompany).slice(0, 4),
       _id: c._id,
       name: c.insCompany,
     }));
-
-    const products = await ProductOrServiceCategorymodel.find({});
-    const financialYears = await financialYearModel.find({});
 
     const todayDate = new Date();
     const currentFYDoc = financialYears.find(fy => {
@@ -809,15 +836,10 @@ const importCsv = async (req, res) => {
           const selectedFYDoc = financialYears.find(fy => fy._id.toString() === financialYear.toString());
           if (selectedFYDoc) {
             const selectedStartYear = new Date(selectedFYDoc.fromDate).getFullYear();
-            if (selectedStartYear === startYear) {
-              return selectedFYDoc._id;
-            }
+            if (selectedStartYear === startYear) return selectedFYDoc._id;
           }
         }
-        const fyDoc = financialYears.find(fy => {
-          const fyStart = new Date(fy.fromDate).getFullYear();
-          return fyStart === startYear;
-        });
+        const fyDoc = financialYears.find(fy => new Date(fy.fromDate).getFullYear() === startYear);
         if (fyDoc) return fyDoc._id;
       }
       return undefined;
@@ -833,11 +855,8 @@ const importCsv = async (req, res) => {
         if (!isNaN(parsed.getTime())) return parsed;
         const parts = excelDate.split(/[-/]/);
         if (parts.length === 3) {
-          if (parts[2].length === 4) {
-            return new Date(parts[2], parts[1] - 1, parts[0]);
-          } else if (parts[0].length === 4) {
-            return new Date(parts[0], parts[1] - 1, parts[2]);
-          }
+          if (parts[2].length === 4) return new Date(parts[2], parts[1] - 1, parts[0]);
+          if (parts[0].length === 4) return new Date(parts[0], parts[1] - 1, parts[2]);
         }
         return null;
       }
@@ -848,36 +867,18 @@ const importCsv = async (req, res) => {
       const cleanKeys = keys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
       for (const rowKey of Object.keys(row)) {
         const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanKeys.includes(cleanRowKey)) {
-          return row[rowKey];
-        }
+        if (cleanKeys.includes(cleanRowKey)) return row[rowKey];
       }
       for (const rowKey of Object.keys(row)) {
         const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
         for (const cleanK of cleanKeys) {
-          if (cleanRowKey.includes(cleanK) || cleanK.includes(cleanRowKey)) {
-            return row[rowKey];
-          }
+          if (cleanRowKey.includes(cleanK) || cleanK.includes(cleanRowKey)) return row[rowKey];
         }
       }
       return undefined;
     };
 
     const policyDetailsArray = [];
-
-    const existingCustomers = await CustomerRegistrationModel.find({});
-    const existingGroups = await customerGroupModel.find({});
-    const gstPercentages = await GstPercentageModel.find({});
-
-    const customerMap = existingCustomers.reduce((map, cust) => {
-      map[toLowerSafe(cust.name)] = cust._id;
-      return map;
-    }, {});
-
-    const groupMap = existingGroups.reduce((map, gp) => {
-      map[toLowerSafe(gp.customerGroupName)] = gp._id;
-      return map;
-    }, {});
 
     const existingPolicies = await policyDetailModel.find(
       cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId) ? { companyId: new mongoose.Types.ObjectId(cleanCompanyId) } : {},
@@ -952,24 +953,14 @@ const importCsv = async (req, res) => {
             const savedGroup = await newGroup.save();
             customerGroup = savedGroup._id;
             groupMap[insuredNameKey] = savedGroup._id;
-
-            // Sync with Customer Master
             try {
               const legacyCustomer = new Customer({
-                clientType: "corporate",
-                customerId: "GRP" + Date.now(),
-                customerName: insuredName,
-                email: email,
-                mobile: mobile,
-                gst: gstNo
+                clientType: "corporate", customerId: "GRP" + Date.now(), customerName: insuredName, email, mobile, gst: gstNo
               });
               await legacyCustomer.save();
-            } catch (err) {
-              console.error("Error saving corporate group to Customer Master during import:", err);
-            }
+            } catch (err) {}
           }
         } else {
-          // Default/retail
           if (customerMap[insuredNameKey]) {
             retailCustomer = customerMap[insuredNameKey];
           } else {
@@ -977,59 +968,43 @@ const importCsv = async (req, res) => {
             let nextId = "CUST001";
             if (lastCustomer && lastCustomer.customerId) {
               const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
-              if (!isNaN(lastNum)) {
-                nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
-              }
+              if (!isNaN(lastNum)) nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
             }
-
             const newCustomer = new CustomerRegistrationModel({
-              customerType: "retail",
-              customerId: nextId,
-              name: insuredName,
-              email: email,
-              mobile: mobile,
-              gstNo: gstNo,
+              customerType: "retail", customerId: nextId, name: insuredName, email, mobile, gstNo: gstNo,
               createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined,
             });
             const savedCustomer = await newCustomer.save();
             retailCustomer = savedCustomer._id;
             customerMap[insuredNameKey] = savedCustomer._id;
-
-            // Sync with Customer Master
             try {
               const legacyCustomer = new Customer({
-                clientType: "retail",
-                customerId: nextId,
-                customerName: insuredName,
-                email: email,
-                mobile: mobile,
-                gst: gstNo
+                clientType: "retail", customerId: nextId, customerName: insuredName, email, mobile, gst: gstNo
               });
               await legacyCustomer.save();
-            } catch (err) {
-              console.error("Error saving retail customer to Customer Master during import:", err);
-            }
+            } catch (err) {}
           }
         }
       }
 
-      const odPremium = Number(getValueByPossibleKeys(row, "OD PREMIUM")) || 0;
-      const tpPremium = Number(getValueByPossibleKeys(row, "TP PREMIUM", "TP PREMIUM ")) || 0;
-      const netPremium = Number(getValueByPossibleKeys(row, "NET PREMIUM")) || 0;
-      const totalAmount = Number(getValueByPossibleKeys(row, "TOTAL PREMIUM ( WITH GST )", "TOTAL PREMIUM", "TOTAL AMOUNT", "GROSS PREMIUM")) || 0;
-      const gstAmount = Math.max(0, totalAmount - netPremium);
-
+      const getNum = (...keys) => Number(getValueByPossibleKeys(row, ...keys)) || 0;
+      
+      const odPremium = getNum("OD PREMIUM");
+      const tpPremium = getNum("TP PREMIUM", "TP PREMIUM ");
+      const netPremium = getNum("NET PREMIUM");
+      const totalAmount = getNum("TOTAL PREMIUM ( WITH GST )", "TOTAL PREMIUM", "TOTAL AMOUNT", "GROSS PREMIUM");
+      const gstAmount = getNum("GST AMOUNT") || Math.max(0, totalAmount - netPremium);
+      
       const gstRate = netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 0;
       const gstDoc = gstPercentages.find(g => Math.round(g.value) === gstRate);
       const gstId = gstDoc?._id || undefined;
 
-      const tpGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0;
-      const odGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0;
-      const tpAmount = tpPremium + tpGstAmount;
-      const odAmount = odPremium + odGstAmount;
+      const tpGstAmount = getNum("TP GST AMOUNT") || (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0);
+      const odGstAmount = getNum("OD GST AMOUNT") || (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0);
+      const tpAmount = getNum("TP AMOUNT") || (tpPremium + tpGstAmount);
+      const odAmount = getNum("OD AMOUNT") || (odPremium + odGstAmount);
 
-      const expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "RENEWAL/ROLLOVER"));
-
+      const expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "RENEWAL/ROLLOVER", "END DATE"));
       let startDate = excelDateToJSDate(getValueByPossibleKeys(row, "START DATE", "INCEPTION DATE", "POLICY START DATE", "EFFECTIVE DATE"));
       if (!startDate && expiredDate) {
         startDate = new Date(expiredDate);
@@ -1037,76 +1012,206 @@ const importCsv = async (req, res) => {
         startDate.setDate(startDate.getDate() + 1);
       }
 
-      const tpStartDate = tpPremium > 0 ? startDate : undefined;
-      const odStartDate = odPremium > 0 ? startDate : undefined;
-
-      const transactionDate = startDate ? new Date(startDate) : undefined;
-      if (transactionDate) {
-        transactionDate.setDate(transactionDate.getDate() - 2);
+      const companyValRaw = getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY");
+      const companyVal = toLowerSafe(companyValRaw);
+      let insCompanyId = undefined;
+      let insurerNameStr = companyValRaw;
+      if (companyVal) {
+        const matchedCompany = companyList.find((c) => {
+          const cleanCompany = toLowerSafe(c.name);
+          return cleanCompany.includes(companyVal) || companyVal.includes(cleanCompany) || c.key === companyVal.slice(0, 4);
+        });
+        if (matchedCompany) {
+          insCompanyId = matchedCompany._id;
+          insurerNameStr = matchedCompany.name;
+        } else {
+          try {
+            const newComp = new insCompanyModel({ companyId: cleanCompanyId, insCompany: companyValRaw });
+            const saved = await newComp.save();
+            insCompanyId = saved._id;
+            companyList.push({ key: companyVal.slice(0,4), name: companyValRaw, _id: saved._id });
+          } catch(e) {}
+        }
       }
 
-      const companyVal = toLowerSafe(getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY"));
-      const matchedCompany = companyList.find((c) => {
-        const cleanCompany = toLowerSafe(c.name);
-        return cleanCompany.includes(companyVal) || companyVal.includes(cleanCompany) || c.key === companyVal.slice(0, 4);
-      });
-      const insCompanyId = matchedCompany?._id || undefined;
-      const insurerName = matchedCompany?.name || getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY") || "";
+      let productValRaw = getValueByPossibleKeys(row, "Product Type", "Product");
+      let productVal = toLowerSafe(productValRaw);
+      let productId = undefined;
+      if (productVal) {
+        const matchedProd = products.find((p) => toLowerSafe(p.productName) === productVal);
+        if (matchedProd) {
+          productId = matchedProd._id;
+        } else {
+          try {
+            const newProd = new ProductOrServiceCategorymodel({ companyId: cleanCompanyId, productName: productValRaw });
+            const saved = await newProd.save();
+            productId = saved._id;
+            products.push(saved);
+          } catch(e) {}
+        }
+      }
 
-      const deptVal = toLowerSafe(getValueByPossibleKeys(row, "DEPARTMENT", "DEPT"));
-      const insDepartmentId = departmentMap[deptVal] || undefined;
+      let subProductValRaw = getValueByPossibleKeys(row, "Sub Product");
+      let subProductVal = toLowerSafe(subProductValRaw);
+      let subProductId = undefined;
+      if (subProductVal && productValRaw) {
+        if (subProductMap[subProductVal]) {
+          subProductId = subProductMap[subProductVal];
+        } else {
+          try {
+            const newSubProd = new SubProductCategoryModel({ companyId: cleanCompanyId, productName: productValRaw, subProductName: subProductValRaw, createdBy: cleanCompanyId });
+            const saved = await newSubProd.save();
+            subProductId = saved._id;
+            subProductMap[subProductVal] = saved._id;
+          } catch(e) {}
+        }
+      }
 
-      const prodVal = toLowerSafe(getValueByPossibleKeys(row, "PRODUCT TYPE", "PRODUCT"));
-      const productId = products.find((p) => toLowerSafe(p.productName) === prodVal)?._id || undefined;
+      let brokerNameValRaw = getValueByPossibleKeys(row, "Broker Name");
+      let brokerNameVal = toLowerSafe(brokerNameValRaw);
+      let brokerNameId = undefined;
+      if (brokerNameVal) {
+        if (brokerNameMap[brokerNameVal]) {
+          brokerNameId = brokerNameMap[brokerNameVal];
+        } else {
+          try {
+            const newBroker = new brokerNameModel({ companyId: cleanCompanyId, brokerName: brokerNameValRaw });
+            const saved = await newBroker.save();
+            brokerNameId = saved._id;
+            brokerNameMap[brokerNameVal] = saved._id;
+          } catch(e) {}
+        }
+      }
 
-      policyDetailsArray.push({
+      let branchBrokerValRaw = getValueByPossibleKeys(row, "Branch Broker");
+      let branchBrokerVal = toLowerSafe(branchBrokerValRaw);
+      let branchBrokerId = undefined;
+      if (branchBrokerVal) {
+        if (branchBrokerMap[branchBrokerVal]) {
+          branchBrokerId = branchBrokerMap[branchBrokerVal];
+        } else {
+          try {
+            const newBB = new branchBrokerModel({ companyId: cleanCompanyId, branchCode: branchBrokerValRaw, branchName: branchBrokerValRaw });
+            const saved = await newBB.save();
+            branchBrokerId = saved._id;
+            branchBrokerMap[branchBrokerVal] = saved._id;
+          } catch(e) {}
+        }
+      }
+
+      const obj = {
         financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")) || (financialYear && mongoose.Types.ObjectId.isValid(financialYear) ? new mongoose.Types.ObjectId(financialYear) : currentFYId),
         companyId: cleanCompanyId,
-        branchCode: "695386ca12bb6dd679ffa330",
-        branchName: "NAGPUR",
-        brokerName: "6964ceed36ec87f56adc1332",
-        branchBroker: "6964b3a4b2343d2e611ea796",
-        cutomerName: insuredName,
         clientType,
         retailCustomer,
         customerGroup,
+        subCustomerGroup: subCustomerGroupMap[toLowerSafe(getValueByPossibleKeys(row, "Sub Customer Group"))] || undefined,
+        checkSubGroupGroup: getValueByPossibleKeys(row, "Check Sub Group"),
+        branchCode: branchMap[toLowerSafe(getValueByPossibleKeys(row, "Branch Code", "Branch Name"))] || undefined,
+        branchName: getValueByPossibleKeys(row, "Branch Name", "Branch"),
+        prefix: prefixMap[toLowerSafe(getValueByPossibleKeys(row, "Prefix"))] || undefined,
+        cutomerName: insuredName,
         mobile,
         email,
-        renewable: getValueByPossibleKeys(row, "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
-        vehicleModel: getValueByPossibleKeys(row, "MAKE/MODEL", "MODEL") || "",
-        policyNumber: String(getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "").trim(),
-        odPremium,
+        insurerName: insurerNameStr,
+        gstNo,
+        showNominee: String(getValueByPossibleKeys(row, "Show Nominee")).toLowerCase() === 'true',
+        nomineeName: getValueByPossibleKeys(row, "Nominee Name"),
+        nomineeRelation: getValueByPossibleKeys(row, "Nominee Relation"),
+        nomineeContact: getValueByPossibleKeys(row, "Nominee Contact"),
+        insDepartment: departmentMap[toLowerSafe(getValueByPossibleKeys(row, "Department", "Insurance Department"))] || undefined,
+        product: productId,
+        subProduct: subProductId,
+        insCompany: insCompanyId,
+        brokerName: brokerNameId,
+        branchBroker: branchBrokerId,
+        
+        tpPolicyDuration: getValueByPossibleKeys(row, "TP Policy Duration") || (tpPremium > 0 ? "YEARLY" : undefined),
+        tpStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "TP Start Date")) || (tpPremium > 0 ? startDate : undefined),
+        tpEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "TP End Date")) || (tpPremium > 0 ? expiredDate : undefined),
         tpPremium,
+        tpGst: gstId,
+        tpGstAmount,
+        tpAmount,
+
+        odPolicyDuration: getValueByPossibleKeys(row, "OD Policy Duration") || (odPremium > 0 ? "YEARLY" : undefined),
+        odStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD Start Date")) || (odPremium > 0 ? startDate : undefined),
+        odEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD End Date")) || (odPremium > 0 ? expiredDate : undefined),
+        odPremium,
+        odGst: gstId,
+        odGstAmount,
+        odAmount,
+
+        policyNumber,
+        renewalDate: excelDateToJSDate(getValueByPossibleKeys(row, "Renewal Date", "RENEWAL/ROLLOVER")) || expiredDate,
+        sumInsured: getNum("Sum Insured"),
+        renewable: getValueByPossibleKeys(row, "Renewable", "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
+        numberOfInstallments: getValueByPossibleKeys(row, "Number Of Installments"),
+        livesCover: getValueByPossibleKeys(row, "Lives Covered"),
+        nextInstallmentDate: excelDateToJSDate(getValueByPossibleKeys(row, "Next Installment Date")),
+        policyDuration: getValueByPossibleKeys(row, "Policy Duration") || "YEARLY",
+        startDate,
+        endDate: expiredDate,
+        riskCode: getValueByPossibleKeys(row, "Risk Code"),
+        otherAddon: otherAddonMap[toLowerSafe(getValueByPossibleKeys(row, "Other Addon"))] || undefined,
+        terrirism: getValueByPossibleKeys(row, "Terrorism"),
         netPremium,
+        CGST: getValueByPossibleKeys(row, "CGST"),
+        SGST: getValueByPossibleKeys(row, "SGST"),
+        IGST: getValueByPossibleKeys(row, "IGST"),
+        UGST: getValueByPossibleKeys(row, "UGST"),
+        gst: gstId,
         gstAmount,
         totalAmount,
-        renewalDate: expiredDate,
-        insDepartment: insDepartmentId,
-        product: productId,
-        insCompany: insCompanyId,
-        insurerName,
-        tpEndDate: tpPremium > 0 ? expiredDate : undefined,
-        odEndDate: odPremium > 0 ? expiredDate : undefined,
-        endDate: expiredDate || undefined,
-        startDate: startDate || undefined,
-        tpStartDate,
-        odStartDate,
-        transactionDate,
-        gst: gstId,
-        tpGst: tpPremium > 0 ? gstId : undefined,
-        odGst: odPremium > 0 ? gstId : undefined,
-        tpGstAmount,
-        odGstAmount,
-        tpAmount,
-        odAmount,
-        policyDuration: "YEARLY",
-        tpPolicyDuration: tpPremium > 0 ? "YEARLY" : undefined,
-        odPolicyDuration: odPremium > 0 ? "YEARLY" : undefined,
+        siteLocation: getValueByPossibleKeys(row, "Site Location"),
+        occupation: getValueByPossibleKeys(row, "Occupation"),
+        retroActive: getValueByPossibleKeys(row, "Retro Active"),
+        incoterms: incotermsMap[toLowerSafe(getValueByPossibleKeys(row, "Incoterms"))] || undefined,
+        marineClause: getValueByPossibleKeys(row, "Marine Clause"),
+        terrorism: getValueByPossibleKeys(row, "Terrorism Cover"),
+        permiumOtherThanTerrorism: getValueByPossibleKeys(row, "Premium Other Than Terrorism"),
+
+        vehicleMake: getValueByPossibleKeys(row, "Vehicle Make"),
+        vehicleModel: getValueByPossibleKeys(row, "MAKE/MODEL", "MODEL", "Vehicle Model") || "",
+        vehicleSubModel: getValueByPossibleKeys(row, "Vehicle Sub Model"),
         vehicleNumber: getValueByPossibleKeys(row, "VEHICLE NO", "VEHICLE NUMBER") || "",
+        engineNumber: getValueByPossibleKeys(row, "Engine Number"),
+        monthYearOfRegn: getValueByPossibleKeys(row, "Month Year Of Registration"),
+        fuelType: fuelTypeMap[toLowerSafe(getValueByPossibleKeys(row, "Fuel Type"))] || undefined,
+        yearOfManufacturing: getValueByPossibleKeys(row, "Year Of Manufacturing"),
+        chassisNumber: getValueByPossibleKeys(row, "Chassis Number"),
+
+        endorsementName: getValueByPossibleKeys(row, "Endorsement Name"),
+        endorsementReason: endorsementMap[toLowerSafe(getValueByPossibleKeys(row, "Endorsement Reason"))] || undefined,
+        endorsementPolicyNumber: getValueByPossibleKeys(row, "Endorsement Policy Number"),
+        endorStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "Endorsement Start Date")),
+        endorEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "Endorsement End Date")),
+        endorsementTerrorism: getValueByPossibleKeys(row, "Endorsement Terrorism"),
+        endorsementOtherTerrorism: getValueByPossibleKeys(row, "Endorsement Other Terrorism"),
+        endorsementNetPremium: getNum("Endorsement Net Premium"),
+        
         paymentMode: getValueByPossibleKeys(row, "PAYMENT MODE") || "online",
-        paidAmount: totalAmount,
-        gstNo,
-      });
+        etotalAmount: getNum("E Total Amount"),
+        paidAmount: getNum("Paid Amount") || totalAmount,
+        chequeNo: getValueByPossibleKeys(row, "Cheque No"),
+        transactionDate: excelDateToJSDate(getValueByPossibleKeys(row, "Transaction Date")) || (startDate ? new Date(new Date(startDate).setDate(startDate.getDate() - 2)) : undefined),
+        posMisRef: getValueByPossibleKeys(row, "POS MIS Ref"),
+        bqpCode: getValueByPossibleKeys(row, "BQP Code"),
+
+        rateOnOtherTerr: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "Rate On Other Terrorism"))] || undefined,
+        amountOnOtherTerr: getNum("Amount On Other Terrorism"),
+        rateOnTerr: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "Rate On Terrorism"))] || undefined,
+        amountOnTerr: getNum("Amount On Terrorism"),
+        odBrokerageRate: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "OD Brokerage Rate"))] || undefined,
+        odBrokerageAmount: getNum("OD Brokerage Amount"),
+        tpBrokerageRate: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "TP Brokerage Rate"))] || undefined,
+        tpBrokerageAmount: getNum("TP Brokerage Amount"),
+        totalBrokerageAmount: getNum("Total Brokerage Amount"),
+        totalBrokerageGst: getNum("Total Brokerage GST"),
+        totalBrokerageAmountincGst: getNum("Total Brokerage Amount Incl GST")
+      };
+
+      policyDetailsArray.push(obj);
     }
 
     let insertedDocs = [];
@@ -1128,11 +1233,7 @@ const importCsv = async (req, res) => {
       });
     } catch (e) {
       console.error(e);
-
-      // documents that WERE inserted
       insertedDocs = e.insertedDocs || [];
-
-      // documents that FAILED
       failedDocs = (e.writeErrors || []).map((err) => ({
         index: err.index,
         error: err.errmsg,
@@ -1155,7 +1256,6 @@ const importCsv = async (req, res) => {
       .json({ success: false, error: e.message });
   }
 };
-
 const exportCsv = async (req, res) => {
   const { companyId } = req.query;
 
