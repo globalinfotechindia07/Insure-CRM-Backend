@@ -1801,9 +1801,6 @@ const importCsv = async (req, res) => {
       const finalTpStartDate = tpStartDate || startDate || null;
       const finalOdStartDate = odStartDate || startDate || null;
 
-      const odStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD START DATE", "OD INCEPTION DATE", "OD EFFECTIVE DATE", "OD FROM DATE", "OD RISK START DATE", "OD RISK INCEPTION DATE", "OD START", "OD FROM", "OD PERIOD FROM", "OD COVER FROM", "OD COMMENCEMENT DATE", "OD_START_DATE", "OD_FROM_DATE")) || startDate;
-      const odEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD END DATE", "OD EXPIRY DATE", "OD RISK EXPIRY DATE", "OD TO DATE", "OD EXPIRY", "OD END", "OD TO", "OD PERIOD TO", "OD COVER TO", "OD EXPIRATION DATE", "OD_END_DATE", "OD_EXPIRY_DATE")) || expiredDate;
-
       const transactionDate = excelDateToJSDate(getValueByPossibleKeys(row, "TRANSACTION DATE", "PAYMENT DATE")) || (startDate ? new Date(new Date(startDate).setDate(new Date(startDate).getDate() - 2)) : undefined);
 
       // Nominee details
