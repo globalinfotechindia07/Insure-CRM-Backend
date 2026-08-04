@@ -131,7 +131,14 @@ const getPolicyDetail = async (req, res) => {
       const idStr = String(policy._id);
       if (seenIds.has(idStr)) continue;
       seenIds.add(idStr);
-      uniquePolicies.push(policy);
+
+      const polObj = policy.toObject ? policy.toObject() : policy;
+      const effectiveEndDate = polObj.endDate || polObj.renewalDate || polObj.odEndDate || polObj.tpEndDate;
+      if (effectiveEndDate) {
+        if (!polObj.renewalDate) polObj.renewalDate = effectiveEndDate;
+        if (!polObj.endDate) polObj.endDate = effectiveEndDate;
+      }
+      uniquePolicies.push(polObj);
     }
 
     return res.status(200).json({ status: "true", data: uniquePolicies });
@@ -588,6 +595,9 @@ const postPolicyDetail = async (req, res) => {
     const resolved = await ensureCustomerExists(req.body, cleanCompanyId);
     const resolvedMasters = await ensureMastersExist(req.body, cleanCompanyId);
 
+    const effectiveRenewalDate = renewalDate || endDate || odEndDate || tpEndDate || undefined;
+    const effectiveEndDate = endDate || renewalDate || odEndDate || tpEndDate || undefined;
+
     // 📝 Create new AdminClientRegistration document
     const newPolicyDetail = new policyDetailModel({
       financialYear: req.body.financialYear || undefined,
@@ -629,7 +639,7 @@ const postPolicyDetail = async (req, res) => {
       odGstAmount,
       odAmount,
       policyNumber,
-      renewalDate,
+      renewalDate: effectiveRenewalDate,
       sumInsured,
       renewable,
       numberOfInstallments,
@@ -637,7 +647,7 @@ const postPolicyDetail = async (req, res) => {
       nextInstallmentDate,
       policyDuration,
       startDate,
-      endDate,
+      endDate: effectiveEndDate,
       riskCode: req.body.riskCode || undefined,
       otherAddon: req.body.otherAddon || undefined,
       terrirism,
@@ -872,6 +882,11 @@ const updatePolicyDetail = async (req, res) => {
 
     const resolvedMasters = await ensureMastersExist(updateData, companyId);
     Object.assign(updateData, resolvedMasters);
+
+    const effectiveRenewalDate = updateData.renewalDate || updateData.endDate || updateData.odEndDate || updateData.tpEndDate;
+    const effectiveEndDate = updateData.endDate || updateData.renewalDate || updateData.odEndDate || updateData.tpEndDate;
+    if (effectiveRenewalDate) updateData.renewalDate = effectiveRenewalDate;
+    if (effectiveEndDate) updateData.endDate = effectiveEndDate;
 
     // 🔍 Duplicate Policy Check on update
     if (updateData.policyNumber && String(updateData.policyNumber).trim() !== "") {
@@ -1753,9 +1768,21 @@ const importCsv = async (req, res) => {
       const tpAmount = tpPremium + tpGstAmount;
       const odAmount = odPremium + odGstAmount;
 
-      let expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "END DATE", "POLICY END DATE", "POLICY EXPIRY DATE", "RISK EXPIRY DATE", "RISK END DATE", "TO DATE", "POLICY TO DATE", "PERIOD OF INSURANCE TO", "INSURANCE PERIOD TO", "PERIOD TO", "POLICY PERIOD TO", "COVER TO", "RISK TO DATE", "RISK TO", "DUE DATE", "RENEWAL DATE", "EXPIRATION DATE", "EXPIRATION", "EFFECTIVE TO", "TO", "END_DATE", "EXPIRY_DATE", "RISK_END_DATE", "RENEWAL/ROLLOVER"));
+      const parsedRenewalDate = excelDateToJSDate(getValueByPossibleKeys(row, "RENEWAL DATE", "RENEWAL_DATE", "RENEWAL", "DUE DATE", "RENEWAL DUE DATE", "RENEWAL/ROLLOVER"));
 
-      let startDate = excelDateToJSDate(rawStartDate);
+      let expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "END DATE", "POLICY END DATE", "POLICY EXPIRY DATE", "RISK EXPIRY DATE", "RISK END DATE", "TO DATE", "POLICY TO DATE", "PERIOD OF INSURANCE TO", "INSURANCE PERIOD TO", "PERIOD TO", "POLICY PERIOD TO", "COVER TO", "RISK TO DATE", "RISK TO", "EXPIRATION DATE", "EXPIRATION", "EFFECTIVE TO", "TO", "END_DATE", "EXPIRY_DATE", "RISK_END_DATE"));
+
+      const tpStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP START DATE", "TP INCEPTION DATE", "TP EFFECTIVE DATE", "TP FROM DATE", "TP RISK START DATE", "TP RISK INCEPTION DATE", "TP START", "TP FROM", "TP PERIOD FROM", "TP COVER FROM", "TP COMMENCEMENT DATE", "TP_START_DATE", "TP_FROM_DATE"));
+      const tpEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP END DATE", "TP EXPIRY DATE", "TP RISK EXPIRY DATE", "TP TO DATE", "TP EXPIRY", "TP END", "TP TO", "TP PERIOD TO", "TP COVER TO", "TP EXPIRATION DATE", "TP_END_DATE", "TP_EXPIRY_DATE"));
+
+      const odStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD START DATE", "OD INCEPTION DATE", "OD EFFECTIVE DATE", "OD FROM DATE", "OD RISK START DATE", "OD RISK INCEPTION DATE", "OD START", "OD FROM", "OD PERIOD FROM", "OD COVER FROM", "OD COMMENCEMENT DATE", "OD_START_DATE", "OD_FROM_DATE"));
+      const odEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD END DATE", "OD EXPIRY DATE", "OD RISK EXPIRY DATE", "OD TO DATE", "OD EXPIRY", "OD END", "OD TO", "OD PERIOD TO", "OD COVER TO", "OD EXPIRATION DATE", "OD_END_DATE", "OD_EXPIRY_DATE"));
+
+      if (!expiredDate) {
+        expiredDate = parsedRenewalDate || odEndDate || tpEndDate || null;
+      }
+
+      let startDate = excelDateToJSDate(rawStartDate) || odStartDate || tpStartDate || null;
 
       if (!startDate && expiredDate) {
         startDate = new Date(expiredDate);
@@ -1767,8 +1794,12 @@ const importCsv = async (req, res) => {
         expiredDate.setDate(expiredDate.getDate() - 1);
       }
 
-      const tpStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP START DATE", "TP INCEPTION DATE", "TP EFFECTIVE DATE", "TP FROM DATE", "TP RISK START DATE", "TP RISK INCEPTION DATE", "TP START", "TP FROM", "TP PERIOD FROM", "TP COVER FROM", "TP COMMENCEMENT DATE", "TP_START_DATE", "TP_FROM_DATE")) || startDate;
-      const tpEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP END DATE", "TP EXPIRY DATE", "TP RISK EXPIRY DATE", "TP TO DATE", "TP EXPIRY", "TP END", "TP TO", "TP PERIOD TO", "TP COVER TO", "TP EXPIRATION DATE", "TP_END_DATE", "TP_EXPIRY_DATE")) || expiredDate;
+      const finalRenewalDate = parsedRenewalDate || odEndDate || tpEndDate || expiredDate || null;
+      const finalEndDate = expiredDate || parsedRenewalDate || odEndDate || tpEndDate || finalRenewalDate || null;
+      const finalTpEndDate = tpEndDate || finalEndDate || finalRenewalDate || null;
+      const finalOdEndDate = odEndDate || finalEndDate || finalRenewalDate || null;
+      const finalTpStartDate = tpStartDate || startDate || null;
+      const finalOdStartDate = odStartDate || startDate || null;
 
       const odStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD START DATE", "OD INCEPTION DATE", "OD EFFECTIVE DATE", "OD FROM DATE", "OD RISK START DATE", "OD RISK INCEPTION DATE", "OD START", "OD FROM", "OD PERIOD FROM", "OD COVER FROM", "OD COMMENCEMENT DATE", "OD_START_DATE", "OD_FROM_DATE")) || startDate;
       const odEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD END DATE", "OD EXPIRY DATE", "OD RISK EXPIRY DATE", "OD TO DATE", "OD EXPIRY", "OD END", "OD TO", "OD PERIOD TO", "OD COVER TO", "OD EXPIRATION DATE", "OD_END_DATE", "OD_EXPIRY_DATE")) || expiredDate;
@@ -1971,23 +2002,23 @@ const importCsv = async (req, res) => {
         tpAmount,
 
         odPolicyDuration: getValueByPossibleKeys(row, "OD Policy Duration") || (odPremium > 0 ? "YEARLY" : undefined),
-        odStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD Start Date")) || (odPremium > 0 ? startDate : undefined),
-        odEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD End Date")) || (odPremium > 0 ? expiredDate : undefined),
+        odStartDate: finalOdStartDate || undefined,
+        odEndDate: finalOdEndDate || undefined,
         odPremium,
         odGst: gstId,
         odGstAmount,
         odAmount,
 
         policyNumber,
-        renewalDate: excelDateToJSDate(getValueByPossibleKeys(row, "Renewal Date", "RENEWAL/ROLLOVER")) || expiredDate,
+        renewalDate: finalRenewalDate || undefined,
         sumInsured: sumInsured || Number(getValueByPossibleKeys(row, "SUM INSURED", "SUM INSURED (RS)", "SUM_INSURED", "SI")) || undefined,
         renewable: getValueByPossibleKeys(row, "Renewable", "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
         numberOfInstallments: getValueByPossibleKeys(row, "Number Of Installments"),
         livesCover: getValueByPossibleKeys(row, "Lives Covered"),
         nextInstallmentDate: excelDateToJSDate(getValueByPossibleKeys(row, "Next Installment Date")),
         policyDuration: getValueByPossibleKeys(row, "Policy Duration") || "YEARLY",
-        startDate,
-        endDate: expiredDate,
+        startDate: startDate || undefined,
+        endDate: finalEndDate || undefined,
         riskCode: riskCodeId || getValueByPossibleKeys(row, "Risk Code"),
         otherAddon: otherAddonId,
         terrirism: getValueByPossibleKeys(row, "Terrorism"),
@@ -1999,18 +2030,15 @@ const importCsv = async (req, res) => {
         gst: gstId,
         gstAmount,
         totalAmount,
-        renewalDate: expiredDate,
         insDepartment: insDepartmentId,
         product: productId,
         subProduct: subProductId,
         insCompany: insCompanyId,
         insurerName,
-        tpEndDate: tpEndDate || expiredDate || undefined,
-        odEndDate: odEndDate || expiredDate || undefined,
-        endDate: expiredDate || undefined,
-        startDate: startDate || undefined,
-        tpStartDate: tpStartDate || startDate || undefined,
-        odStartDate: odStartDate || startDate || undefined,
+        tpEndDate: finalTpEndDate || undefined,
+        odEndDate: finalOdEndDate || undefined,
+        tpStartDate: finalTpStartDate || undefined,
+        odStartDate: finalOdStartDate || undefined,
         transactionDate,
         gst: gstId,
         tpGst: tpPremium > 0 ? gstId : undefined,
