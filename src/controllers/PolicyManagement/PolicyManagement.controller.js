@@ -1556,6 +1556,8 @@ const importCsv = async (req, res) => {
     }, {});
 
     let processedCount = 0;
+    let insertedCount = 0;
+    let duplicateCount = 0;
 
     for (const row of rows) {
       const rawPolicyNumber = getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "";
@@ -2086,8 +2088,16 @@ const importCsv = async (req, res) => {
         if (cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId)) {
           filter.companyId = cleanCompanyId;
         }
-        await policyDetailModel.findOneAndUpdate(filter, policyPayload, { upsert: true, new: true, setDefaultsOnInsert: true });
+        const existingRecord = await policyDetailModel.findOne(filter).select("_id");
+        if (existingRecord) {
+          duplicateCount++;
+          await policyDetailModel.findByIdAndUpdate(existingRecord._id, policyPayload, { new: true });
+        } else {
+          insertedCount++;
+          await policyDetailModel.create(policyPayload);
+        }
       } else {
+        insertedCount++;
         await policyDetailModel.create(policyPayload);
       }
       processedCount++;
@@ -2095,10 +2105,11 @@ const importCsv = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      insertedCount: processedCount,
-      skippedCount: 0,
-      failedCount: 0,
-      message: `Successfully processed and imported ${processedCount} records without errors.`,
+      insertedCount,
+      duplicateCount,
+      skippedCount: duplicateCount,
+      processedCount,
+      message: `Successfully processed ${processedCount} records: ${insertedCount} new inserted, ${duplicateCount} duplicate(s) found.`,
     });
   } catch (e) {
     console.error(e);
