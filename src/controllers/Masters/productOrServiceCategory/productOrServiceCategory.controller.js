@@ -78,21 +78,32 @@ const postProductOrServiceCategory = async (req, res) => {
   }
 };
 
-// ================= GET - Get All Product Categories =================
 const getProductOrServiceCategory = async (req, res) => {
   try {
     const { companyId } = req.query;
-
-    if (!companyId) {
-      return res.status(400).json({
-        status: false,
-        message: "Company ID is required",
-      });
+    let query = {};
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query = {
+          $or: [
+            { companyId: new mongoose.Types.ObjectId(companyId) },
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      }
     }
 
-    const categories = await ProductOrServiceCategorymodel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    })
+    const categories = await ProductOrServiceCategorymodel.find(query)
       .populate("department", "name departmentName department")
       .populate("insDepartment", "insDepartment name departmentName")  // Populate both fields
       .sort({ createdAt: -1 });

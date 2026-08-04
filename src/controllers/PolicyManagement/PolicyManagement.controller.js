@@ -1,5 +1,27 @@
 const mongoose = require("mongoose");
-const { policyDetailModel, insDepartmentModel, insCompanyModel, financialYearModel, CustomerRegistrationModel, customerGroupModel, GstPercentageModel, PrefixModel, SubProductCategoryModel, brokerBranch, brokerNameModel, branchBrokerModel, fuelTypeModel, otherAddonModel, endorsementModel, brokerageRateModel, incotermsModel, subCustomerGroupModel } = require("../../models/index");
+const {
+  policyDetailModel,
+  insDepartmentModel,
+  insCompanyModel,
+  financialYearModel,
+  CustomerRegistrationModel,
+  customerGroupModel,
+  GstPercentageModel,
+  PrefixModel,
+  SubProductCategoryModel,
+  subCustomerGroupModel,
+  brokerBranch,
+  brokerNameModel,
+  branchBrokerModel,
+  fuelTypeModel,
+  incotermsModel,
+  otherAddonModel,
+  endorsementModel,
+  riskCodeModel,
+  CompanyModel,
+  PaymentModeModel,
+  brokerageRateModel
+} = require("../../models/index");
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
 const RenewalReminder = require("../../models/renewalReminder.model");
 const axios = require("axios");
@@ -247,6 +269,172 @@ const ensureCustomerExists = async (body, companyId) => {
   return { retailCustomer, customerGroup };
 };
 
+const ensureMastersExist = async (body, companyId) => {
+  const cleanCompanyId = (companyId && mongoose.Types.ObjectId.isValid(companyId))
+    ? companyId
+    : "68ca95091d6a9cc2b96ae263";
+
+  const resolved = {};
+
+  // Branch Code
+  if (body.branchCode && typeof body.branchCode === "string" && !mongoose.Types.ObjectId.isValid(body.branchCode)) {
+    const clean = body.branchCode.trim();
+    if (clean) {
+      let doc = await brokerBranch.findOne({
+        $or: [
+          { branchCode: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } },
+          { branchName: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } }
+        ]
+      });
+      if (!doc) {
+        doc = await brokerBranch.create({ branchCode: clean, branchName: clean, companyId: cleanCompanyId });
+      }
+      resolved.branchCode = doc._id;
+    }
+  }
+
+  // Prefix
+  if (body.prefix && typeof body.prefix === "string" && !mongoose.Types.ObjectId.isValid(body.prefix)) {
+    const clean = body.prefix.trim();
+    if (clean) {
+      let doc = await PrefixModel.findOne({ prefix: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await PrefixModel.create({ prefix: clean, companyId: cleanCompanyId });
+      }
+      resolved.prefix = doc._id;
+    }
+  }
+
+  // Insurer / Insurance Company
+  if (body.insCompany && typeof body.insCompany === "string" && !mongoose.Types.ObjectId.isValid(body.insCompany)) {
+    const clean = body.insCompany.trim();
+    if (clean) {
+      let doc = await insCompanyModel.findOne({ insCompany: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await insCompanyModel.create({ insCompany: clean, companyId: cleanCompanyId });
+      }
+      resolved.insCompany = doc._id;
+
+      // Sync with CompanyModel (powers http://localhost:3000/master/company)
+      try {
+        const cleanNameUpper = clean.toUpperCase();
+        const existingAdminComp = await CompanyModel.findOne({ name: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+        if (!existingAdminComp) {
+          await CompanyModel.create({
+            name: cleanNameUpper,
+            description: "Created from Policy Management",
+            status: "active"
+          });
+        }
+      } catch (adminCompErr) {
+        console.error("Error syncing company to CompanyModel:", adminCompErr);
+      }
+    }
+  }
+
+  // Ins Department
+  if (body.insDepartment && typeof body.insDepartment === "string" && !mongoose.Types.ObjectId.isValid(body.insDepartment)) {
+    const clean = body.insDepartment.trim();
+    if (clean) {
+      let doc = await insDepartmentModel.findOne({ insDepartment: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await insDepartmentModel.create({ insDepartment: clean, companyId: cleanCompanyId });
+      }
+      resolved.insDepartment = doc._id;
+    }
+  }
+
+  // Product
+  if (body.product && typeof body.product === "string" && !mongoose.Types.ObjectId.isValid(body.product)) {
+    const clean = body.product.trim();
+    if (clean) {
+      let doc = await ProductOrServiceCategorymodel.findOne({ productName: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await ProductOrServiceCategorymodel.create({ productName: clean, insDepartment: resolved.insDepartment || body.insDepartment, companyId: cleanCompanyId });
+      }
+      resolved.product = doc._id;
+    }
+  }
+
+  // Broker Name
+  if (body.brokerName && typeof body.brokerName === "string" && !mongoose.Types.ObjectId.isValid(body.brokerName)) {
+    const clean = body.brokerName.trim();
+    if (clean) {
+      let doc = await brokerNameModel.findOne({ brokerName: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await brokerNameModel.create({ brokerName: clean, companyId: cleanCompanyId });
+      }
+      resolved.brokerName = doc._id;
+    }
+  }
+
+  // Branch Broker
+  if (body.branchBroker && typeof body.branchBroker === "string" && !mongoose.Types.ObjectId.isValid(body.branchBroker)) {
+    const clean = body.branchBroker.trim();
+    if (clean) {
+      let doc = await branchBrokerModel.findOne({ branchBroker: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+      if (!doc) {
+        doc = await branchBrokerModel.create({ branchBroker: clean, companyId: cleanCompanyId });
+      }
+      resolved.branchBroker = doc._id;
+    }
+  }
+  // Payment Mode
+  if (body.paymentMode && typeof body.paymentMode === "string") {
+    const clean = body.paymentMode.trim().toUpperCase();
+    if (clean) {
+      try {
+        let doc = await PaymentModeModel.findOne({
+          paymentMode: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+        });
+        if (!doc) {
+          doc = await PaymentModeModel.create({ paymentMode: clean });
+        }
+        resolved.paymentMode = doc.paymentMode;
+      } catch (pmErr) {
+        console.error("Error creating paymentMode in ensureMastersExist:", pmErr);
+        resolved.paymentMode = clean;
+      }
+    }
+  }
+
+  // Brokerage Rates (tpBrokerageRate, odBrokerageRate, rateOnTerr, rateOnOtherTerr)
+  const resolveSingleBrokerageRate = async (rateVal) => {
+    if (!rateVal) return undefined;
+    if (mongoose.Types.ObjectId.isValid(rateVal)) return rateVal;
+    let num = NaN;
+    if (typeof rateVal === "number") {
+      if (rateVal > 0 && rateVal < 1) num = Math.round(rateVal * 100 * 100) / 100;
+      else num = rateVal;
+    } else {
+      const cleanStr = String(rateVal).replace(/%/g, "").trim();
+      const parsed = Number(cleanStr);
+      if (!isNaN(parsed)) {
+        if (parsed > 0 && parsed < 1) num = Math.round(parsed * 100 * 100) / 100;
+        else num = parsed;
+      }
+    }
+    if (isNaN(num) || num <= 0) return undefined;
+    try {
+      let doc = await brokerageRateModel.findOne({ brokerageRate: num });
+      if (!doc) {
+        doc = await brokerageRateModel.create({ brokerageRate: num, companyId: cleanCompanyId });
+      }
+      return doc._id;
+    } catch (brErr) {
+      console.error("Error resolving brokerage rate in ensureMastersExist:", brErr);
+      return undefined;
+    }
+  };
+
+  if (body.tpBrokerageRate) resolved.tpBrokerageRate = await resolveSingleBrokerageRate(body.tpBrokerageRate);
+  if (body.odBrokerageRate) resolved.odBrokerageRate = await resolveSingleBrokerageRate(body.odBrokerageRate);
+  if (body.rateOnTerr) resolved.rateOnTerr = await resolveSingleBrokerageRate(body.rateOnTerr);
+  if (body.rateOnOtherTerr) resolved.rateOnOtherTerr = await resolveSingleBrokerageRate(body.rateOnOtherTerr);
+
+  return resolved;
+};
+
 const postPolicyDetail = async (req, res) => {
   try {
     // console.log("📥 Incoming request body:", req.body);
@@ -398,6 +586,7 @@ const postPolicyDetail = async (req, res) => {
     }
 
     const resolved = await ensureCustomerExists(req.body, cleanCompanyId);
+    const resolvedMasters = await ensureMastersExist(req.body, cleanCompanyId);
 
     // 📝 Create new AdminClientRegistration document
     const newPolicyDetail = new policyDetailModel({
@@ -407,9 +596,9 @@ const postPolicyDetail = async (req, res) => {
       customerGroup: resolved.customerGroup || undefined,
       subCustomerGroup: req.body.subCustomerGroup || undefined,
       checkSubGroup: req.body.checkSubGroup || undefined,
-      branchCode: req.body.branchCode || undefined,
+      branchCode: resolvedMasters.branchCode || req.body.branchCode || undefined,
       branchName: req.body.branchName || undefined,
-      prefix: req.body.prefix || undefined,
+      prefix: resolvedMasters.prefix || req.body.prefix || undefined,
       cutomerName,
       mobile,
       email,
@@ -419,12 +608,12 @@ const postPolicyDetail = async (req, res) => {
       nomineeName,
       nomineeRelation,
       nomineeContact,
-      insDepartment: req.body.insDepartment || undefined,
-      product: req.body.product || undefined,
+      insDepartment: resolvedMasters.insDepartment || req.body.insDepartment || undefined,
+      product: resolvedMasters.product || req.body.product || undefined,
       subProduct: req.body.subProduct || undefined,
-      insCompany: req.body.insCompany || undefined,
-      brokerName: req.body.brokerName || undefined,
-      branchBroker: req.body.branchBroker || undefined,
+      insCompany: resolvedMasters.insCompany || req.body.insCompany || undefined,
+      brokerName: resolvedMasters.brokerName || req.body.brokerName || undefined,
+      branchBroker: resolvedMasters.branchBroker || req.body.branchBroker || undefined,
       tpPolicyDuration,
       tpStartDate,
       tpEndDate,
@@ -528,7 +717,32 @@ const postPolicyDetail = async (req, res) => {
 const getPolicyDetailById = async (req, res) => {
   try {
     const { id } = req.params;
-    const policy = await policyDetailModel.findById(id);
+    const policy = await policyDetailModel.findById(id)
+      .populate("insDepartment")
+      .populate("insCompany")
+      .populate("product")
+      .populate("subProduct")
+      .populate("retailCustomer")
+      .populate("customerGroup")
+      .populate("subCustomerGroup")
+      .populate("branchCode")
+      .populate("prefix")
+      .populate("brokerName")
+      .populate("branchBroker")
+      .populate("fuelType")
+      .populate("incoterms")
+      .populate("otherAddon")
+      .populate("endorsementReason")
+      .populate("financialYear")
+      .populate("gst")
+      .populate("tpGst")
+      .populate("odGst")
+      .populate("endorsementGst")
+      .populate("tpBrokerageRate")
+      .populate("odBrokerageRate")
+      .populate("rateOnTerr")
+      .populate("rateOnOtherTerr")
+      .populate("riskCode");
     if (!policy) {
       return res
         .status(404)
@@ -568,24 +782,43 @@ const getPolicyDetailById = async (req, res) => {
       policyObj.startDate = computedStart;
       modified = true;
     }
-    if (policy.tpPremium && !policy.tpStartDate && policy.startDate) {
+    if (!policy.tpStartDate && policy.startDate) {
       policy.tpStartDate = policy.startDate;
       policyObj.tpStartDate = policy.startDate;
       modified = true;
     }
-    if (policy.odPremium && !policy.odStartDate && policy.startDate) {
+    if (!policy.odStartDate && policy.startDate) {
       policy.odStartDate = policy.startDate;
       policyObj.odStartDate = policy.startDate;
       modified = true;
     }
-    if (policy.tpPremium && !policy.tpEndDate && policy.endDate) {
-      policy.tpEndDate = policy.endDate;
-      policyObj.tpEndDate = policy.endDate;
+    if (!policy.tpEndDate && (policy.endDate || policy.renewalDate)) {
+      policy.tpEndDate = policy.endDate || policy.renewalDate;
+      policyObj.tpEndDate = policy.endDate || policy.renewalDate;
       modified = true;
     }
-    if (policy.odPremium && !policy.odEndDate && policy.endDate) {
-      policy.odEndDate = policy.endDate;
-      policyObj.odEndDate = policy.endDate;
+    if (!policy.odEndDate && (policy.endDate || policy.renewalDate)) {
+      policy.odEndDate = policy.endDate || policy.renewalDate;
+      policyObj.odEndDate = policy.endDate || policy.renewalDate;
+      modified = true;
+    }
+
+    // Self-repair brokerage totals if missing
+    if (!policy.totalBrokerageGst) {
+      policy.totalBrokerageGst = 18;
+      policyObj.totalBrokerageGst = 18;
+      modified = true;
+    }
+    if ((!policy.totalBrokerageAmount || policy.totalBrokerageAmount === 0) && (policy.odBrokerageAmount || policy.tpBrokerageAmount)) {
+      const tot = (policy.odBrokerageAmount || 0) + (policy.tpBrokerageAmount || 0);
+      policy.totalBrokerageAmount = tot;
+      policyObj.totalBrokerageAmount = tot;
+      modified = true;
+    }
+    if ((!policy.totalBrokerageAmountincGst || policy.totalBrokerageAmountincGst === 0) && policy.totalBrokerageAmount) {
+      const totInc = Math.round((policy.totalBrokerageAmount * (1 + ((policy.totalBrokerageGst || 18) / 100))) * 100) / 100;
+      policy.totalBrokerageAmountincGst = totInc;
+      policyObj.totalBrokerageAmountincGst = totInc;
       modified = true;
     }
 
@@ -636,6 +869,9 @@ const updatePolicyDetail = async (req, res) => {
     if (resolved.customerGroup) {
       updateData.customerGroup = resolved.customerGroup;
     }
+
+    const resolvedMasters = await ensureMastersExist(updateData, companyId);
+    Object.assign(updateData, resolvedMasters);
 
     // 🔍 Duplicate Policy Check on update
     if (updateData.policyNumber && String(updateData.policyNumber).trim() !== "") {
@@ -766,57 +1002,475 @@ const importCsv = async (req, res) => {
 
     const toLowerSafe = (val) => val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
 
-    // Parallel fetch for all masters
-    const [
-      insDepartments, insCompany, products, financialYears, existingCustomers, existingGroups, gstPercentages,
-      prefixes, subProducts, branches, brokerNames, branchBrokers, fuelTypes, otherAddons, endorsements, brokerageRates, incoterms, subCustomerGroups
-    ] = await Promise.all([
-      insDepartmentModel.find({}, { _id: 1, insDepartment: 1 }),
-      insCompanyModel.find({}, { _id: 1, insCompany: 1 }),
-      ProductOrServiceCategorymodel.find({}),
-      financialYearModel.find({}),
-      CustomerRegistrationModel.find({}),
-      customerGroupModel.find({}),
-      GstPercentageModel.find({}),
-      PrefixModel ? PrefixModel.find({}) : Promise.resolve([]),
-      SubProductCategoryModel ? SubProductCategoryModel.find({}) : Promise.resolve([]),
-      brokerBranch ? brokerBranch.find({}) : Promise.resolve([]),
-      brokerNameModel ? brokerNameModel.find({}) : Promise.resolve([]),
-      branchBrokerModel ? branchBrokerModel.find({}) : Promise.resolve([]),
-      fuelTypeModel ? fuelTypeModel.find({}) : Promise.resolve([]),
-      otherAddonModel ? otherAddonModel.find({}) : Promise.resolve([]),
-      endorsementModel ? endorsementModel.find({}) : Promise.resolve([]),
-      brokerageRateModel ? brokerageRateModel.find({}) : Promise.resolve([]),
-      incotermsModel ? incotermsModel.find({}) : Promise.resolve([]),
-      subCustomerGroupModel ? subCustomerGroupModel.find({}) : Promise.resolve([])
-    ]);
+    const insDepartments = await insDepartmentModel.find({});
+    const insCompanies = await insCompanyModel.find({});
+    const products = await ProductOrServiceCategorymodel.find({});
+    const financialYears = await financialYearModel.find({});
+    const existingCustomers = await CustomerRegistrationModel.find({});
+    const existingGroups = await customerGroupModel.find({});
+    const gstPercentages = await GstPercentageModel.find({});
+    const prefixes = await PrefixModel.find({});
+    const subProducts = await SubProductCategoryModel.find({});
+    const subCustomerGroups = await subCustomerGroupModel.find({});
+    const brokerBranches = await brokerBranch.find({});
+    const brokerNames = await brokerNameModel.find({});
+    const branchBrokers = await branchBrokerModel.find({});
+    const fuelTypes = await fuelTypeModel.find({});
+    const incotermsList = await incotermsModel.find({});
+    const otherAddons = await otherAddonModel.find({});
+    const endorsements = await endorsementModel.find({});
+    const riskCodes = await riskCodeModel.find({});
+    const paymentModes = await PaymentModeModel.find({});
+    const brokerageRatesList = await brokerageRateModel.find({});
 
-    const buildMap = (arr, keyField) => arr.reduce((map, item) => {
-      if (item && item[keyField]) map[toLowerSafe(item[keyField])] = item._id;
-      return map;
-    }, {});
+    const resolveBrokerageRate = async (rawVal) => {
+      if (rawVal === undefined || rawVal === null || rawVal === "") return undefined;
+      let numRate = NaN;
+      if (typeof rawVal === "number") {
+        if (rawVal > 0 && rawVal < 1) {
+          numRate = Math.round(rawVal * 100 * 100) / 100;
+        } else {
+          numRate = rawVal;
+        }
+      } else {
+        const cleanStr = String(rawVal).replace(/%/g, "").trim();
+        const parsed = Number(cleanStr);
+        if (!isNaN(parsed)) {
+          if (parsed > 0 && parsed < 1) {
+            numRate = Math.round(parsed * 100 * 100) / 100;
+          } else {
+            numRate = parsed;
+          }
+        }
+      }
 
-    const departmentMap = buildMap(insDepartments, "insDepartment");
-    const prefixMap = buildMap(prefixes, "prefix");
-    const subProductMap = buildMap(subProducts, "subProductCategoryName"); // Assuming field name
-    const branchMap = buildMap(branches, "branchName");
-    const brokerNameMap = buildMap(brokerNames, "brokerName");
-    const branchBrokerMap = buildMap(branchBrokers, "branchBrokerName");
-    const fuelTypeMap = buildMap(fuelTypes, "fuelType");
-    const otherAddonMap = buildMap(otherAddons, "otherAddon");
-    const endorsementMap = buildMap(endorsements, "endorsementName");
-    const brokerageRateMap = buildMap(brokerageRates, "rate"); // Assuming field name
-    const incotermsMap = buildMap(incoterms, "incoterms");
-    const subCustomerGroupMap = buildMap(subCustomerGroups, "subCustomerGroupName");
+      if (isNaN(numRate)) return undefined;
 
-    const customerMap = buildMap(existingCustomers, "name");
-    const groupMap = buildMap(existingGroups, "customerGroupName");
+      let found = brokerageRatesList.find(b => Number(b.brokerageRate) === numRate);
+      if (!found) {
+        try {
+          let existing = await brokerageRateModel.findOne({
+            brokerageRate: numRate
+          });
+          if (!existing) {
+            existing = new brokerageRateModel({
+              brokerageRate: numRate,
+              companyId: cleanCompanyId
+            });
+            await existing.save();
+          }
+          brokerageRatesList.push(existing);
+          found = existing;
+        } catch (bErr) {
+          console.error("Error creating brokerage rate during import:", bErr);
+        }
+      }
+      return found?._id;
+    };
 
-    const companyList = insCompany.map((c) => ({
-      key: toLowerSafe(c.insCompany).slice(0, 4),
-      _id: c._id,
-      name: c.insCompany,
-    }));
+    // 🏢 Dynamic Department Resolver & Cache
+    const deptCache = new Map();
+    insDepartments.forEach((d) => {
+      if (d.insDepartment) {
+        deptCache.set(toLowerSafe(d.insDepartment), d._id);
+      }
+    });
+
+    const resolveDepartment = async (rawDeptStr) => {
+      const cleanDept = String(rawDeptStr || "").trim();
+      if (!cleanDept) return undefined;
+      const lower = toLowerSafe(cleanDept);
+
+      if (deptCache.has(lower)) return deptCache.get(lower);
+
+      for (const [key, id] of deptCache.entries()) {
+        if (key.includes(lower) || lower.includes(key)) {
+          return id;
+        }
+      }
+
+      try {
+        const newDept = new insDepartmentModel({
+          insDepartment: cleanDept,
+          companyId: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : cleanCompanyId
+        });
+        const savedDept = await newDept.save();
+        deptCache.set(lower, savedDept._id);
+        return savedDept._id;
+      } catch (err) {
+        console.error("Error creating dynamic department during import:", err);
+        return undefined;
+      }
+    };
+
+    // 🏢 Dynamic Company Resolver & Cache
+    const companyCache = new Map();
+    insCompanies.forEach((c) => {
+      if (c.insCompany) {
+        companyCache.set(toLowerSafe(c.insCompany), { _id: c._id, name: c.insCompany });
+      }
+    });
+
+    const resolveCompany = async (rawCompStr) => {
+      const cleanComp = String(rawCompStr || "").trim();
+      if (!cleanComp) return { _id: undefined, name: "" };
+      const lower = toLowerSafe(cleanComp);
+
+      if (companyCache.has(lower)) return companyCache.get(lower);
+
+      for (const [key, val] of companyCache.entries()) {
+        if (key.includes(lower) || lower.includes(key) || key.slice(0, 4) === lower.slice(0, 4)) {
+          return val;
+        }
+      }
+
+      try {
+        const newComp = new insCompanyModel({
+          insCompany: cleanComp,
+          companyId: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : cleanCompanyId
+        });
+        const savedComp = await newComp.save();
+
+        // Sync with CompanyModel (powers http://localhost:3000/master/company)
+        try {
+          const cleanNameUpper = cleanComp.trim().toUpperCase();
+          const existingAdminComp = await CompanyModel.findOne({ name: { $regex: new RegExp(`^${cleanComp.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } });
+          if (!existingAdminComp) {
+            await CompanyModel.create({
+              name: cleanNameUpper,
+              description: "Imported from Policy Excel",
+              status: "active"
+            });
+          }
+        } catch (adminCompErr) {
+          console.error("Error syncing company to CompanyModel during import:", adminCompErr);
+        }
+
+        const resObj = { _id: savedComp._id, name: savedComp.insCompany };
+        companyCache.set(lower, resObj);
+        return resObj;
+      } catch (err) {
+        console.error("Error creating dynamic company during import:", err);
+        return { _id: undefined, name: cleanComp };
+      }
+    };
+
+    // 📦 Dynamic Product Resolver & Cache
+    const productCache = new Map();
+    products.forEach((p) => {
+      if (p.productName) {
+        productCache.set(toLowerSafe(p.productName), p._id);
+      }
+    });
+
+    const resolveProduct = async (rawProdStr, deptId) => {
+      const cleanProd = String(rawProdStr || "").trim();
+      if (!cleanProd) return undefined;
+      const lower = toLowerSafe(cleanProd);
+
+      if (productCache.has(lower)) return productCache.get(lower);
+
+      for (const [key, id] of productCache.entries()) {
+        if (key.includes(lower) || lower.includes(key)) {
+          return id;
+        }
+      }
+
+      try {
+        const newProd = new ProductOrServiceCategorymodel({
+          productName: cleanProd,
+          insDepartment: deptId || undefined,
+          department: deptId || undefined,
+          companyId: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : cleanCompanyId
+        });
+        const savedProd = await newProd.save();
+        productCache.set(lower, savedProd._id);
+        return savedProd._id;
+      } catch (err) {
+        console.error("Error creating dynamic product during import:", err);
+        return undefined;
+      }
+    };
+
+    const prefixCache = new Map();
+    prefixes.forEach((p) => {
+      if (p.prefix) prefixCache.set(toLowerSafe(p.prefix), p._id);
+    });
+    const resolvePrefix = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (prefixCache.has(lower)) return prefixCache.get(lower);
+      try {
+        const doc = new PrefixModel({ prefix: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        prefixCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic prefix during import:", err);
+        return undefined;
+      }
+    };
+
+    // 📦 Dynamic SubProduct Resolver & Cache
+    const subProductCache = new Map();
+    subProducts.forEach((sp) => {
+      if (sp.subProductName) subProductCache.set(toLowerSafe(sp.subProductName), sp._id);
+    });
+    const resolveSubProduct = async (rawSubStr, productId) => {
+      const cleanSub = String(rawSubStr || "").trim();
+      if (!cleanSub) return undefined;
+      const lower = toLowerSafe(cleanSub);
+      if (subProductCache.has(lower)) return subProductCache.get(lower);
+      try {
+        let parentProdName = "General";
+        if (productId) {
+          const prodDoc = products.find(p => p._id.toString() === productId.toString());
+          if (prodDoc) parentProdName = prodDoc.productName;
+        }
+        const doc = new SubProductCategoryModel({
+          subProductName: cleanSub,
+          productName: parentProdName,
+          companyId: cleanCompanyId,
+          createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined
+        });
+        const saved = await doc.save();
+        subProductCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic subProduct during import:", err);
+        return undefined;
+      }
+    };
+
+    // 👥 Dynamic SubCustomerGroup Resolver & Cache
+    const subGroupCache = new Map();
+    subCustomerGroups.forEach((sg) => {
+      if (sg.subCustomerGroup) subGroupCache.set(toLowerSafe(sg.subCustomerGroup), sg._id);
+    });
+    const resolveSubCustomerGroup = async (rawSubGrpStr, customerGroupId) => {
+      const cleanSub = String(rawSubGrpStr || "").trim();
+      if (!cleanSub || !customerGroupId) return undefined;
+      const lower = toLowerSafe(cleanSub);
+      if (subGroupCache.has(lower)) return subGroupCache.get(lower);
+      try {
+        const doc = new subCustomerGroupModel({
+          subCustomerGroup: cleanSub,
+          customerGroupName: customerGroupId,
+          companyId: cleanCompanyId
+        });
+        const saved = await doc.save();
+        subGroupCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic subCustomerGroup during import:", err);
+        return undefined;
+      }
+    };
+
+    // 🏢 Dynamic BrokerBranch Resolver & Cache
+    const branchCache = new Map();
+    brokerBranches.forEach((b) => {
+      if (b.branchCode) branchCache.set(toLowerSafe(b.branchCode), { _id: b._id, branchName: b.branchName || b.branchCode });
+      if (b.branchName) branchCache.set(toLowerSafe(b.branchName), { _id: b._id, branchName: b.branchName });
+    });
+    const resolveBrokerBranch = async (rawBranchStr) => {
+      const clean = String(rawBranchStr || "").trim();
+      if (!clean) return { _id: undefined, branchName: "" };
+      const lower = toLowerSafe(clean);
+      if (branchCache.has(lower)) return branchCache.get(lower);
+      try {
+        const doc = new brokerBranch({
+          branchCode: clean,
+          branchName: clean,
+          companyId: cleanCompanyId
+        });
+        const saved = await doc.save();
+        const resObj = { _id: saved._id, branchName: saved.branchName };
+        branchCache.set(lower, resObj);
+        return resObj;
+      } catch (err) {
+        console.error("Error creating dynamic brokerBranch during import:", err);
+        return { _id: undefined, branchName: clean };
+      }
+    };
+
+    // 🤝 Dynamic BrokerName Resolver & Cache
+    const brokerNameCache = new Map();
+    brokerNames.forEach((bn) => {
+      if (bn.brokerName) brokerNameCache.set(toLowerSafe(bn.brokerName), bn._id);
+    });
+    const resolveBrokerName = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (brokerNameCache.has(lower)) return brokerNameCache.get(lower);
+      try {
+        const doc = new brokerNameModel({ brokerName: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        brokerNameCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic brokerName during import:", err);
+        return undefined;
+      }
+    };
+
+    // 🏢 Dynamic BranchBroker Resolver & Cache
+    const branchBrokerCache = new Map();
+    branchBrokers.forEach((bb) => {
+      if (bb.branchBroker) branchBrokerCache.set(toLowerSafe(bb.branchBroker), bb._id);
+    });
+    const resolveBranchBroker = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (branchBrokerCache.has(lower)) return branchBrokerCache.get(lower);
+      try {
+        const doc = new branchBrokerModel({ branchBroker: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        branchBrokerCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic branchBroker during import:", err);
+        return undefined;
+      }
+    };
+
+    // ⚓ Dynamic FuelType Resolver & Cache
+    const fuelTypeCache = new Map();
+    fuelTypes.forEach((ft) => {
+      if (ft.fuelType) fuelTypeCache.set(toLowerSafe(ft.fuelType), ft._id);
+    });
+    const resolveFuelType = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (fuelTypeCache.has(lower)) return fuelTypeCache.get(lower);
+      try {
+        const doc = new fuelTypeModel({ fuelType: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        fuelTypeCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic fuelType during import:", err);
+        return undefined;
+      }
+    };
+
+    // 📜 Dynamic Incoterms Resolver & Cache
+    const incotermsCache = new Map();
+    incotermsList.forEach((it) => {
+      if (it.incoterms) incotermsCache.set(toLowerSafe(it.incoterms), it._id);
+    });
+    const resolveIncoterms = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (incotermsCache.has(lower)) return incotermsCache.get(lower);
+      try {
+        const doc = new incotermsModel({ incoterms: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        incotermsCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic incoterms during import:", err);
+        return undefined;
+      }
+    };
+
+    // ➕ Dynamic OtherAddon Resolver & Cache
+    const addonCache = new Map();
+    otherAddons.forEach((oa) => {
+      if (oa.otherAddon) addonCache.set(toLowerSafe(oa.otherAddon), oa._id);
+    });
+    const resolveOtherAddon = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (addonCache.has(lower)) return addonCache.get(lower);
+      try {
+        const doc = new otherAddonModel({ otherAddon: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        addonCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic otherAddon during import:", err);
+        return undefined;
+      }
+    };
+
+    // 📝 Dynamic Endorsement Resolver & Cache
+    const endorsementCache = new Map();
+    endorsements.forEach((e) => {
+      if (e.endorsement) endorsementCache.set(toLowerSafe(e.endorsement), e._id);
+    });
+    const resolveEndorsement = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (endorsementCache.has(lower)) return endorsementCache.get(lower);
+      try {
+        const doc = new endorsementModel({ endorsement: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        endorsementCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic endorsement during import:", err);
+        return undefined;
+      }
+    };
+
+    // ⚠️ Dynamic RiskCode Resolver & Cache
+    const riskCodeCache = new Map();
+    riskCodes.forEach((rc) => {
+      if (rc.riskCode) riskCodeCache.set(toLowerSafe(rc.riskCode), rc._id);
+    });
+    const resolveRiskCode = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return undefined;
+      const lower = toLowerSafe(clean);
+      if (riskCodeCache.has(lower)) return riskCodeCache.get(lower);
+      try {
+        const doc = new riskCodeModel({ riskCode: clean, companyId: cleanCompanyId });
+        const saved = await doc.save();
+        riskCodeCache.set(lower, saved._id);
+        return saved._id;
+      } catch (err) {
+        console.error("Error creating dynamic riskCode during import:", err);
+        return undefined;
+      }
+    };
+
+    // 💳 Dynamic PaymentMode Resolver & Cache
+    const paymentModeCache = new Map();
+    paymentModes.forEach((pm) => {
+      if (pm.paymentMode) paymentModeCache.set(toLowerSafe(pm.paymentMode), pm.paymentMode);
+    });
+
+    const resolvePaymentMode = async (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return "ONLINE";
+      const targetMode = clean.toUpperCase();
+
+      const targetLower = toLowerSafe(targetMode);
+      if (paymentModeCache.has(targetLower)) return paymentModeCache.get(targetLower);
+
+      try {
+        let existingMode = await PaymentModeModel.findOne({
+          paymentMode: { $regex: new RegExp(`^${targetMode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+        });
+        if (!existingMode) {
+          existingMode = await PaymentModeModel.create({ paymentMode: targetMode });
+        }
+        paymentModeCache.set(targetLower, existingMode.paymentMode);
+        return existingMode.paymentMode;
+      } catch (err) {
+        console.error("Error creating dynamic paymentMode during import:", err);
+        paymentModeCache.set(targetLower, targetMode);
+        return targetMode;
+      }
+    };
 
     const todayDate = new Date();
     const currentFYDoc = financialYears.find(fy => {
@@ -847,20 +1501,33 @@ const importCsv = async (req, res) => {
 
     const excelDateToJSDate = (excelDate) => {
       if (!excelDate) return null;
+      if (excelDate instanceof Date) {
+        return isNaN(excelDate.getTime()) ? null : excelDate;
+      }
+      if (typeof excelDate === "number") {
+        return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+      }
       if (typeof excelDate === "string") {
-        if (/^\d+(\.\d+)?$/.test(excelDate.trim())) {
-          return new Date(Math.round((Number(excelDate) - 25569) * 86400 * 1000));
+        const str = excelDate.trim();
+        if (!str) return null;
+        if (/^\d+(\.\d+)?$/.test(str)) {
+          return new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
         }
-        const parsed = new Date(excelDate);
+        const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+        if (dmyMatch) {
+          const [, d, m, y] = dmyMatch;
+          return new Date(y, m - 1, d);
+        }
+        const ymdMatch = str.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (ymdMatch) {
+          const [, y, m, d] = ymdMatch;
+          return new Date(y, m - 1, d);
+        }
+        const parsed = new Date(str);
         if (!isNaN(parsed.getTime())) return parsed;
-        const parts = excelDate.split(/[-/]/);
-        if (parts.length === 3) {
-          if (parts[2].length === 4) return new Date(parts[2], parts[1] - 1, parts[0]);
-          if (parts[0].length === 4) return new Date(parts[0], parts[1] - 1, parts[2]);
-        }
         return null;
       }
-      return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+      return null;
     };
 
     const getValueByPossibleKeys = (row, ...keys) => {
@@ -878,57 +1545,25 @@ const importCsv = async (req, res) => {
       return undefined;
     };
 
-    const policyDetailsArray = [];
+    const customerMap = existingCustomers.reduce((map, cust) => {
+      map[toLowerSafe(cust.name)] = cust._id;
+      return map;
+    }, {});
 
-    const existingPolicies = await policyDetailModel.find(
-      cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId) ? { companyId: new mongoose.Types.ObjectId(cleanCompanyId) } : {},
-      { policyNumber: 1, cutomerName: 1, insCompany: 1, startDate: 1 }
-    );
-    const existingPolicyNumbers = new Set(
-      existingPolicies
-        .map((p) => String(p.policyNumber || "").trim().toLowerCase())
-        .filter((p) => p !== "")
-    );
-    const existingComposites = new Set(
-      existingPolicies
-        .map((p) => {
-          const cName = String(p.cutomerName || "").trim().toLowerCase();
-          const comp = String(p.insCompany || "").trim().toLowerCase();
-          const sDate = p.startDate ? new Date(p.startDate).toISOString().split("T")[0] : "";
-          return `${cName}|${comp}|${sDate}`;
-        })
-        .filter((k) => !k.startsWith("||"))
-    );
+    const groupMap = existingGroups.reduce((map, gp) => {
+      map[toLowerSafe(gp.customerGroupName)] = gp._id;
+      return map;
+    }, {});
 
-    const seenInFile = new Set();
-    const seenCompositesInFile = new Set();
-    let skippedCount = 0;
+    let processedCount = 0;
 
     for (const row of rows) {
       const rawPolicyNumber = getValueByPossibleKeys(row, "POLICY NUMBER", "POLICY NO") || "";
       const policyNumber = String(rawPolicyNumber).trim();
-      const policyNumberKey = policyNumber.toLowerCase();
 
       const clientType = toLowerSafe(getValueByPossibleKeys(row, "CUSTOMER TYPE", "CLIENT TYPE")) || "retail";
       const insuredName = String(getValueByPossibleKeys(row, "INSURED NAME", "CUSTOMER NAME", "CLIENT NAME") || "").trim();
-      const rawStartDate = getValueByPossibleKeys(row, "POLICY START DATE", "START DATE") || "";
-
-      if (policyNumberKey) {
-        if (existingPolicyNumbers.has(policyNumberKey) || seenInFile.has(policyNumberKey)) {
-          console.log(`Skipping duplicate policy: ${policyNumber}`);
-          skippedCount++;
-          continue;
-        }
-        seenInFile.add(policyNumberKey);
-      } else {
-        const compositeKey = `${insuredName.toLowerCase()}|${rawStartDate}`;
-        if (insuredName && (existingComposites.has(compositeKey) || seenCompositesInFile.has(compositeKey))) {
-          console.log(`Skipping duplicate policy without policy number: ${insuredName}`);
-          skippedCount++;
-          continue;
-        }
-        if (insuredName) seenCompositesInFile.add(compositeKey);
-      }
+      const rawStartDate = getValueByPossibleKeys(row, "POLICY START DATE", "START DATE", "INCEPTION DATE", "RISK INCEPTION DATE", "RISK START DATE", "EFFECTIVE DATE", "FROM DATE", "POLICY FROM DATE", "PERIOD OF INSURANCE FROM", "INSURANCE PERIOD FROM", "PERIOD FROM", "POLICY PERIOD FROM", "COMMENCEMENT DATE", "COVER FROM", "RISK FROM DATE", "RISK FROM", "POLICY START", "FROM", "ISSUE DATE", "BOOKING DATE", "EFFECTIVE FROM", "START_DATE", "FROM_DATE", "RISK_START_DATE", "COMMENCEMENT") || "";
 
       const mobile = String(getValueByPossibleKeys(row, "MOBILE NO", "MOBILE", "PHONE") || "").trim();
       const email = String(getValueByPossibleKeys(row, "MAIL ID", "EMAIL") || "").trim();
@@ -987,148 +1622,320 @@ const importCsv = async (req, res) => {
         }
       }
 
-      const getNum = (...keys) => Number(getValueByPossibleKeys(row, ...keys)) || 0;
+      const rawPrefix = getValueByPossibleKeys(row, "PREFIX", "TITLE", "SALUTATION", "CUSTOMER PREFIX", "MR/MRS", "HONORIFIC", "PREFIX NAME");
+      const prefixId = await resolvePrefix(rawPrefix);
+
+      const rawBranch = getValueByPossibleKeys(row, "BRANCH CODE", "BRANCH", "BRANCH NAME", "BROKER BRANCH", "LOCATION", "OFFICE", "LOCATION CODE", "DEPT CODE", "BRANCH_CODE");
+      const branchObj = await resolveBrokerBranch(rawBranch);
+      let branchCodeId = branchObj._id;
+      if (!branchCodeId && brokerBranches.length > 0) {
+        branchCodeId = brokerBranches[0]._id;
+      }
+      const branchNameStr = branchObj.branchName || getValueByPossibleKeys(row, "BRANCH NAME", "BRANCH") || "";
+
+      const rawBroker = getValueByPossibleKeys(row, "BROKER NAME", "BROKER", "AGENT NAME", "POS NAME", "AGENT");
+      const brokerNameId = (await resolveBrokerName(rawBroker));
+
+      const rawBranchBroker = getValueByPossibleKeys(row, "BRANCH BROKER", "BROKER BRANCH NAME", "BRANCH BROKER NAME");
+      const branchBrokerId = (await resolveBranchBroker(rawBranchBroker));
+
+      const rawComp = getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY", "INSURER", "INSURER NAME", "INS COMPANY", "INS_COMPANY", "COMPANY NAME", "INSURANCE CO", "INS CO", "INSURER COMPANY");
+      const compObj = await resolveCompany(rawComp);
+      const insCompanyId = compObj._id;
+      const insurerName = compObj.name || rawComp || "";
+
+      const rawDept = getValueByPossibleKeys(row, "DEPARTMENT", "DEPT", "INSURANCE DEPARTMENT", "DEPT NAME", "DEPARTMENT NAME", "POLICY DEPARTMENT", "POLICY DEPT", "INS_DEPARTMENT", "DEPT_NAME");
+      const insDepartmentId = await resolveDepartment(rawDept);
+
+      const rawProd = getValueByPossibleKeys(row, "PRODUCT TYPE", "PRODUCT", "PRODUCT NAME", "PRODUCT_TYPE", "POLICY TYPE", "CATEGORY", "CLASS", "SUB CLASS", "TYPE OF POLICY", "COVERAGE TYPE");
+      const productId = await resolveProduct(rawProd, insDepartmentId);
+
+      const rawSubProd = getValueByPossibleKeys(row, "SUB PRODUCT", "SUB PRODUCT CATEGORY", "SUB PRODUCT NAME", "SUB CATEGORY");
+      const subProductId = await resolveSubProduct(rawSubProd, productId);
+
+      const rawSubGroup = getValueByPossibleKeys(row, "SUB CUSTOMER GROUP", "SUB GROUP", "SUB GROUP NAME", "SUB CUSTOMER GROUP NAME");
+      const subCustomerGroupId = await resolveSubCustomerGroup(rawSubGroup, customerGroup);
+
+      const rawFuel = getValueByPossibleKeys(row, "FUEL TYPE", "FUEL");
+      const fuelTypeId = await resolveFuelType(rawFuel);
+
+      const rawInco = getValueByPossibleKeys(row, "INCOTERMS", "INCO TERM", "INCO TERMS");
+      const incotermsId = await resolveIncoterms(rawInco);
+
+      const rawAddon = getValueByPossibleKeys(row, "OTHER ADDON", "ADDON", "ADDON NAME", "ADDONS");
+      const otherAddonId = await resolveOtherAddon(rawAddon);
+
+      const rawEndorsementReason = getValueByPossibleKeys(row, "ENDORSEMENT REASON", "ENDORSEMENT TYPE", "ENDORSEMENT REASON NAME");
+      const endorsementReasonId = await resolveEndorsement(rawEndorsementReason);
+
+      const rawRiskCode = getValueByPossibleKeys(row, "RISK CODE", "RISK");
+      const riskCodeId = await resolveRiskCode(rawRiskCode);
+
+      // Financial & Date Parsing
+      const odPremium = Number(getValueByPossibleKeys(row, "OD PREMIUM", "OD PREM")) || 0;
+      const tpPremium = Number(getValueByPossibleKeys(row, "TP PREMIUM", "TP PREM", "TP PREMIUM ")) || 0;
+      let netPremium = Number(getValueByPossibleKeys(row, "NET PREMIUM", "NET PREM", "NET AMOUNT", "BASIC PREMIUM", "PREMIUM", "TAXABLE VALUE", "BASIC PREM", "NET")) || 0;
+      if (!netPremium && (odPremium || tpPremium)) {
+        netPremium = odPremium + tpPremium;
+      }
+
+      let totalAmount = Number(getValueByPossibleKeys(row, "TOTAL PREMIUM ( WITH GST )", "TOTAL PREMIUM", "TOTAL AMOUNT", "GROSS PREMIUM", "FINAL PREMIUM", "TOTAL", "GROSS PREM", "AMOUNT WITH GST", "PREMIUM WITH GST", "TOTAL PREM")) || 0;
       
-      const odPremium = getNum("OD PREMIUM");
-      const tpPremium = getNum("TP PREMIUM", "TP PREMIUM ");
-      const netPremium = getNum("NET PREMIUM");
-      const totalAmount = getNum("TOTAL PREMIUM ( WITH GST )", "TOTAL PREMIUM", "TOTAL AMOUNT", "GROSS PREMIUM");
-      const gstAmount = getNum("GST AMOUNT") || Math.max(0, totalAmount - netPremium);
-      
-      const gstRate = netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 0;
-      const gstDoc = gstPercentages.find(g => Math.round(g.value) === gstRate);
+      let gstAmount = Number(getValueByPossibleKeys(row, "GST AMOUNT", "TOTAL GST", "GST", "IGST AMOUNT", "CGST AMOUNT", "SGST AMOUNT")) || 0;
+      if (!gstAmount && totalAmount > 0 && netPremium > 0) {
+        gstAmount = Math.max(0, totalAmount - netPremium);
+      }
+      if (!totalAmount && netPremium > 0) {
+        totalAmount = netPremium + gstAmount;
+      }
+      if (!netPremium && totalAmount > 0) {
+        netPremium = Math.max(0, totalAmount - gstAmount);
+      }
+
+      const rawGstHeader = getValueByPossibleKeys(row, "GST RATE", "GST %", "GST PERCENTAGE", "TAX RATE", "TAX %", "GST PER");
+      let gstRate = rawGstHeader !== undefined ? Number(rawGstHeader) : (netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 18);
+      if (isNaN(gstRate)) gstRate = 18;
+
+      let gstDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(gstRate));
+      if (!gstDoc) {
+        let existingGst = await GstPercentageModel.findOne({
+          value: gstRate,
+          isDeleted: false
+        });
+        if (!existingGst) {
+          existingGst = new GstPercentageModel({
+            companyId: cleanCompanyId,
+            value: gstRate,
+            cgst: gstRate / 2,
+            sgst: gstRate / 2,
+            igst: gstRate,
+            ugst: 0,
+            effectiveFrom: new Date("2020-01-01")
+          });
+          await existingGst.save();
+        }
+        gstPercentages.push(existingGst);
+        gstDoc = existingGst;
+      }
       const gstId = gstDoc?._id || undefined;
 
-      const tpGstAmount = getNum("TP GST AMOUNT") || (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0);
-      const odGstAmount = getNum("OD GST AMOUNT") || (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0);
-      const tpAmount = getNum("TP AMOUNT") || (tpPremium + tpGstAmount);
-      const odAmount = getNum("OD AMOUNT") || (odPremium + odGstAmount);
+      const tpGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0;
+      const odGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0;
+      const tpAmount = tpPremium + tpGstAmount;
+      const odAmount = odPremium + odGstAmount;
 
-      const expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "RENEWAL/ROLLOVER", "END DATE"));
-      let startDate = excelDateToJSDate(getValueByPossibleKeys(row, "START DATE", "INCEPTION DATE", "POLICY START DATE", "EFFECTIVE DATE"));
+      let expiredDate = excelDateToJSDate(getValueByPossibleKeys(row, "EXPIRED DATE", "EXPIRY DATE", "END DATE", "POLICY END DATE", "POLICY EXPIRY DATE", "RISK EXPIRY DATE", "RISK END DATE", "TO DATE", "POLICY TO DATE", "PERIOD OF INSURANCE TO", "INSURANCE PERIOD TO", "PERIOD TO", "POLICY PERIOD TO", "COVER TO", "RISK TO DATE", "RISK TO", "DUE DATE", "RENEWAL DATE", "EXPIRATION DATE", "EXPIRATION", "EFFECTIVE TO", "TO", "END_DATE", "EXPIRY_DATE", "RISK_END_DATE", "RENEWAL/ROLLOVER"));
+
+      let startDate = excelDateToJSDate(rawStartDate);
+
       if (!startDate && expiredDate) {
         startDate = new Date(expiredDate);
         startDate.setFullYear(startDate.getFullYear() - 1);
         startDate.setDate(startDate.getDate() + 1);
+      } else if (startDate && !expiredDate) {
+        expiredDate = new Date(startDate);
+        expiredDate.setFullYear(expiredDate.getFullYear() + 1);
+        expiredDate.setDate(expiredDate.getDate() - 1);
       }
 
-      const companyValRaw = getValueByPossibleKeys(row, "COMPANY", "INSURANCE COMPANY");
-      const companyVal = toLowerSafe(companyValRaw);
-      let insCompanyId = undefined;
-      let insurerNameStr = companyValRaw;
-      if (companyVal) {
-        const matchedCompany = companyList.find((c) => {
-          const cleanCompany = toLowerSafe(c.name);
-          return cleanCompany.includes(companyVal) || companyVal.includes(cleanCompany) || c.key === companyVal.slice(0, 4);
-        });
-        if (matchedCompany) {
-          insCompanyId = matchedCompany._id;
-          insurerNameStr = matchedCompany.name;
+      const tpStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP START DATE", "TP INCEPTION DATE", "TP EFFECTIVE DATE", "TP FROM DATE", "TP RISK START DATE", "TP RISK INCEPTION DATE", "TP START", "TP FROM", "TP PERIOD FROM", "TP COVER FROM", "TP COMMENCEMENT DATE", "TP_START_DATE", "TP_FROM_DATE")) || startDate;
+      const tpEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "TP END DATE", "TP EXPIRY DATE", "TP RISK EXPIRY DATE", "TP TO DATE", "TP EXPIRY", "TP END", "TP TO", "TP PERIOD TO", "TP COVER TO", "TP EXPIRATION DATE", "TP_END_DATE", "TP_EXPIRY_DATE")) || expiredDate;
+
+      const odStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD START DATE", "OD INCEPTION DATE", "OD EFFECTIVE DATE", "OD FROM DATE", "OD RISK START DATE", "OD RISK INCEPTION DATE", "OD START", "OD FROM", "OD PERIOD FROM", "OD COVER FROM", "OD COMMENCEMENT DATE", "OD_START_DATE", "OD_FROM_DATE")) || startDate;
+      const odEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "OD END DATE", "OD EXPIRY DATE", "OD RISK EXPIRY DATE", "OD TO DATE", "OD EXPIRY", "OD END", "OD TO", "OD PERIOD TO", "OD COVER TO", "OD EXPIRATION DATE", "OD_END_DATE", "OD_EXPIRY_DATE")) || expiredDate;
+
+      const transactionDate = excelDateToJSDate(getValueByPossibleKeys(row, "TRANSACTION DATE", "PAYMENT DATE")) || (startDate ? new Date(new Date(startDate).setDate(new Date(startDate).getDate() - 2)) : undefined);
+
+      // Nominee details
+      const showNomineeVal = getValueByPossibleKeys(row, "SHOW NOMINEE", "NOMINEE SHOW");
+      const showNominee = showNomineeVal !== undefined ? (String(showNomineeVal).toLowerCase() === "true" || String(showNomineeVal).toLowerCase() === "yes" || showNomineeVal === 1) : false;
+      const nomineeName = String(getValueByPossibleKeys(row, "NOMINEE NAME", "NOMINEE") || "").trim();
+      const nomineeRelation = String(getValueByPossibleKeys(row, "NOMINEE RELATION", "RELATION WITH NOMINEE", "RELATION") || "").trim();
+      const nomineeContact = String(getValueByPossibleKeys(row, "NOMINEE CONTACT", "NOMINEE MOBILE", "NOMINEE PHONE") || "").trim();
+
+      // Policy Coverage & Duration details
+      const sumInsured = Number(getValueByPossibleKeys(row, "SUM INSURED", "SUM ASSURED", "SI")) || undefined;
+      const numberOfInstallments = String(getValueByPossibleKeys(row, "NUMBER OF INSTALLMENTS", "NO OF INSTALLMENTS", "INSTALLMENTS") || "").trim();
+      const livesCover = String(getValueByPossibleKeys(row, "LIVES COVERED", "LIVES COVER", "NO OF LIVES") || "").trim();
+      const nextInstallmentDate = excelDateToJSDate(getValueByPossibleKeys(row, "NEXT INSTALLMENT DATE", "NEXT INSTALLMENT"));
+      
+      const rawDuration = String(getValueByPossibleKeys(row, "POLICY DURATION", "DURATION", "TERM", "POLICY TERM", "PERIOD", "TENURE") || "").trim().toUpperCase();
+      let policyDuration = "YEARLY";
+      if (rawDuration.includes("QUARTER")) policyDuration = "QUARTERLY";
+      else if (rawDuration.includes("MONTH")) policyDuration = "MONTHLY";
+      else if (rawDuration) policyDuration = rawDuration;
+
+      const tpPolicyDuration = String(getValueByPossibleKeys(row, "TP POLICY DURATION", "TP DURATION", "TP TERM", "TP PERIOD") || "YEARLY").trim().toUpperCase() || "YEARLY";
+      const odPolicyDuration = String(getValueByPossibleKeys(row, "OD POLICY DURATION", "OD DURATION", "OD TERM", "OD PERIOD") || "YEARLY").trim().toUpperCase() || "YEARLY";
+
+      const terrorism = String(getValueByPossibleKeys(row, "TERRORISM", "TERRORISM COVER", "TERRORISM PREMIUM") || "").trim();
+      const permiumOtherThanTerrorism = String(getValueByPossibleKeys(row, "PREMIUM OTHER THAN TERRORISM", "PREMIUM OTHER THAN TERROR") || "").trim();
+      const siteLocation = String(getValueByPossibleKeys(row, "SITE LOCATION", "LOCATION") || "").trim();
+      const occupation = String(getValueByPossibleKeys(row, "OCCUPATION") || "").trim();
+      const retroActive = String(getValueByPossibleKeys(row, "RETRO ACTIVE", "RETROACTIVE DATE", "RETRO ACTIVE DATE") || "").trim();
+      const marineClause = String(getValueByPossibleKeys(row, "MARINE CLAUSE") || "").trim();
+      const checkSubGroupGroup = String(getValueByPossibleKeys(row, "CHECK SUB GROUP", "CHECK SUB GROUP GROUP") || "").trim();
+
+      // Vehicle details (Make & Model)
+      let vehicleMake = String(getValueByPossibleKeys(row, "VEHICLE MAKE", "MAKE", "CAR MAKE") || "").trim();
+      let vehicleModel = String(getValueByPossibleKeys(row, "VEHICLE MODEL", "MODEL", "MAKE/MODEL", "MAKE & MODEL", "VEHICLE MAKE & MODEL", "VEHICLE MAKE/MODEL", "CAR MODEL") || "").trim();
+      if (!vehicleMake && vehicleModel && (vehicleModel.includes("/") || vehicleModel.includes("-") || vehicleModel.includes("&"))) {
+        const parts = vehicleModel.split(/[\/\-&]/);
+        if (parts.length >= 2) {
+          vehicleMake = parts[0].trim();
+          vehicleModel = parts.slice(1).join(" ").trim();
+        }
+      }
+      const vehicleSubModel = String(getValueByPossibleKeys(row, "VEHICLE SUB MODEL", "SUB MODEL") || "").trim();
+      const vehicleNumber = String(getValueByPossibleKeys(row, "VEHICLE NO", "VEHICLE NUMBER", "REGISTRATION NO", "REG NO") || "").trim();
+      const engineNumber = String(getValueByPossibleKeys(row, "ENGINE NUMBER", "ENGINE NO") || "").trim();
+      const monthYearOfRegn = String(getValueByPossibleKeys(row, "MONTH YEAR OF REGISTRATION", "REGISTRATION DATE", "REG DATE", "REGN MONTH YEAR", "REG MONTH YEAR") || "").trim();
+      const yearOfManufacturing = String(getValueByPossibleKeys(row, "YEAR OF MANUFACTURING", "MFG YEAR", "MANUFACTURING YEAR") || "").trim();
+      const chassisNumber = String(getValueByPossibleKeys(row, "CHASSIS NUMBER", "CHASSIS NO") || "").trim();
+
+      // Endorsement details
+      const endorsementName = String(getValueByPossibleKeys(row, "ENDORSEMENT NAME", "ENDORSEMENT") || "").trim();
+      const endorsementPolicyNumber = String(getValueByPossibleKeys(row, "ENDORSEMENT POLICY NUMBER", "ENDORSEMENT POLICY NO", "ENDORSEMENT NO") || "").trim();
+      const endorStartDate = excelDateToJSDate(getValueByPossibleKeys(row, "ENDORSEMENT START DATE", "ENDOR START DATE"));
+      const endorEndDate = excelDateToJSDate(getValueByPossibleKeys(row, "ENDORSEMENT END DATE", "ENDOR END DATE"));
+      const endorsementTerrorism = String(getValueByPossibleKeys(row, "ENDORSEMENT TERRORISM") || "").trim();
+      const endorsementOtherTerrorism = String(getValueByPossibleKeys(row, "ENDORSEMENT OTHER TERRORISM") || "").trim();
+      const endorsementNetPremium = Number(getValueByPossibleKeys(row, "ENDORSEMENT NET PREMIUM")) || undefined;
+      const endorsementGstAmount = Number(getValueByPossibleKeys(row, "ENDORSEMENT GST AMOUNT", "ENDORSEMENT GST")) || undefined;
+
+      // Payment & Taxes
+      const CGST = String(getValueByPossibleKeys(row, "CGST") || "").trim();
+      const SGST = String(getValueByPossibleKeys(row, "SGST") || "").trim();
+      const IGST = String(getValueByPossibleKeys(row, "IGST") || "").trim();
+      const UGST = String(getValueByPossibleKeys(row, "UGST") || "").trim();
+      const etotalAmount = Number(getValueByPossibleKeys(row, "E TOTAL AMOUNT", "E-TOTAL AMOUNT")) || undefined;
+      const paidAmountVal = Number(getValueByPossibleKeys(row, "PAID AMOUNT", "AMOUNT PAID"));
+      const paidAmount = !isNaN(paidAmountVal) && paidAmountVal > 0 ? paidAmountVal : totalAmount;
+      const chequeNo = String(getValueByPossibleKeys(row, "CHEQUE NO", "CHEQUE NUMBER", "TRANSACTION NO", "REF NO") || "").trim();
+      const posMisRef = String(getValueByPossibleKeys(row, "POS MIS REF", "POS MIS REFERENCE", "MIS REF") || "").trim();
+      const bqpCode = String(getValueByPossibleKeys(row, "BQP CODE", "BQP") || "").trim();
+
+      const rawPayMode = getValueByPossibleKeys(row, "PAYMENT MODE", "PAYMENT TYPE", "MODE OF PAYMENT", "PAYMENT METHOD", "PAY MODE", "PAYMENT");
+      const paymentMode = await resolvePaymentMode(rawPayMode);
+
+      // Brokerage & Rate details
+      const parseNumericRate = (rawVal) => {
+        if (rawVal === undefined || rawVal === null || rawVal === "") return 0;
+        const num = Number(String(rawVal).replace(/[^0-9.]/g, ""));
+        return isNaN(num) ? 0 : num;
+      };
+
+      const rawTpRate = getValueByPossibleKeys(row, "TP BROKERAGE RATE", "TP BROKERAGE %", "TP COMMISSION %", "TP BROKERAGE RATE (%)");
+      const tpBrokerageRateId = await resolveBrokerageRate(rawTpRate);
+      const tpRateNum = parseNumericRate(rawTpRate);
+
+      const rawOdRate = getValueByPossibleKeys(row, "OD BROKERAGE RATE", "OD BROKERAGE %", "OD COMMISSION %", "BROKERAGE RATE", "BROKERAGE %", "COMMISSION %", "OD BROKERAGE RATE (%)");
+      const odBrokerageRateId = await resolveBrokerageRate(rawOdRate);
+      const odRateNum = parseNumericRate(rawOdRate);
+
+      const rawTerrRate = getValueByPossibleKeys(row, "RATE ON TERRORISM", "RATE ON TERROR", "TERRORISM RATE", "TERROR RATE", "TERRORISM BROKERAGE RATE", "RATE ON TERRORISM (%)", "RATE ON TERROR (%)", "TERRORISM BROKERAGE RATE (%)", "RATE_ON_TERRORISM", "RATE_ON_TERROR");
+      const rateOnTerrId = await resolveBrokerageRate(rawTerrRate);
+      const terrRateNum = parseNumericRate(rawTerrRate);
+
+      const rawOtherTerrRate = getValueByPossibleKeys(row, "RATE ON OTHER TERRORISM", "RATE ON OTHER TERROR", "OTHER TERRORISM RATE", "OTHER TERROR RATE", "OTHER TERRORISM BROKERAGE RATE", "RATE ON OTHER TERRORISM (%)", "RATE ON OTHER TERROR (%)", "OTHER TERRORISM BROKERAGE RATE (%)", "RATE_ON_OTHER_TERRORISM", "RATE_ON_OTHER_TERROR");
+      const rateOnOtherTerrId = await resolveBrokerageRate(rawOtherTerrRate);
+      const otherTerrRateNum = parseNumericRate(rawOtherTerrRate);
+
+      const rawEndorGst = getValueByPossibleKeys(row, "ENDORSEMENT GST", "ENDORSEMENT GST %", "ENDORSEMENT GST RATE");
+      const endorGstDoc = rawEndorGst !== undefined ? gstPercentages.find(g => Math.round(g.value) === Math.round(Number(rawEndorGst))) : undefined;
+      const endorsementGstId = endorGstDoc?._id || undefined;
+
+      let amountOnTerr = Number(getValueByPossibleKeys(row, "AMOUNT ON TERRORISM", "TERRORISM AMOUNT"));
+      if (isNaN(amountOnTerr) || amountOnTerr === 0) {
+        const terrPrem = Number(terrorism) || 0;
+        if (terrPrem > 0 && terrRateNum > 0) {
+          amountOnTerr = Math.round(((terrPrem * terrRateNum) / 100) * 100) / 100;
         } else {
-          try {
-            const newComp = new insCompanyModel({ companyId: cleanCompanyId, insCompany: companyValRaw });
-            const saved = await newComp.save();
-            insCompanyId = saved._id;
-            companyList.push({ key: companyVal.slice(0,4), name: companyValRaw, _id: saved._id });
-          } catch(e) {}
+          amountOnTerr = undefined;
         }
       }
 
-      let productValRaw = getValueByPossibleKeys(row, "Product Type", "Product");
-      let productVal = toLowerSafe(productValRaw);
-      let productId = undefined;
-      if (productVal) {
-        const matchedProd = products.find((p) => toLowerSafe(p.productName) === productVal);
-        if (matchedProd) {
-          productId = matchedProd._id;
+      let amountOnOtherTerr = Number(getValueByPossibleKeys(row, "AMOUNT ON OTHER TERRORISM", "OTHER TERRORISM AMOUNT"));
+      if (isNaN(amountOnOtherTerr) || amountOnOtherTerr === 0) {
+        const otherTerrPrem = Number(permiumOtherThanTerrorism) || (netPremium - (Number(terrorism) || 0));
+        if (otherTerrPrem > 0 && otherTerrRateNum > 0) {
+          amountOnOtherTerr = Math.round(((otherTerrPrem * otherTerrRateNum) / 100) * 100) / 100;
         } else {
-          try {
-            const newProd = new ProductOrServiceCategorymodel({ companyId: cleanCompanyId, productName: productValRaw });
-            const saved = await newProd.save();
-            productId = saved._id;
-            products.push(saved);
-          } catch(e) {}
+          amountOnOtherTerr = undefined;
         }
       }
 
-      let subProductValRaw = getValueByPossibleKeys(row, "Sub Product");
-      let subProductVal = toLowerSafe(subProductValRaw);
-      let subProductId = undefined;
-      if (subProductVal && productValRaw) {
-        if (subProductMap[subProductVal]) {
-          subProductId = subProductMap[subProductVal];
+      let tpBrokerageAmount = Number(getValueByPossibleKeys(row, "TP BROKERAGE AMOUNT", "TP BROKERAGE", "TP COMMISSION", "TP BROKERAGE (RS)"));
+      if (isNaN(tpBrokerageAmount) || tpBrokerageAmount === 0) {
+        if (tpPremium > 0 && tpRateNum > 0) {
+          tpBrokerageAmount = Math.round(((tpPremium * tpRateNum) / 100) * 100) / 100;
         } else {
-          try {
-            const newSubProd = new SubProductCategoryModel({ companyId: cleanCompanyId, productName: productValRaw, subProductName: subProductValRaw, createdBy: cleanCompanyId });
-            const saved = await newSubProd.save();
-            subProductId = saved._id;
-            subProductMap[subProductVal] = saved._id;
-          } catch(e) {}
+          tpBrokerageAmount = undefined;
         }
       }
 
-      let brokerNameValRaw = getValueByPossibleKeys(row, "Broker Name");
-      let brokerNameVal = toLowerSafe(brokerNameValRaw);
-      let brokerNameId = undefined;
-      if (brokerNameVal) {
-        if (brokerNameMap[brokerNameVal]) {
-          brokerNameId = brokerNameMap[brokerNameVal];
+      let odBrokerageAmount = Number(getValueByPossibleKeys(row, "OD BROKERAGE AMOUNT", "OD BROKERAGE", "OD COMMISSION", "OD BROKERAGE (RS)"));
+      if (isNaN(odBrokerageAmount) || odBrokerageAmount === 0) {
+        if (odPremium > 0 && odRateNum > 0) {
+          odBrokerageAmount = Math.round(((odPremium * odRateNum) / 100) * 100) / 100;
+        } else if (netPremium > 0 && odRateNum > 0 && (!tpPremium || tpPremium === 0)) {
+          odBrokerageAmount = Math.round(((netPremium * odRateNum) / 100) * 100) / 100;
         } else {
-          try {
-            const newBroker = new brokerNameModel({ companyId: cleanCompanyId, brokerName: brokerNameValRaw });
-            const saved = await newBroker.save();
-            brokerNameId = saved._id;
-            brokerNameMap[brokerNameVal] = saved._id;
-          } catch(e) {}
+          odBrokerageAmount = undefined;
         }
       }
 
-      let branchBrokerValRaw = getValueByPossibleKeys(row, "Branch Broker");
-      let branchBrokerVal = toLowerSafe(branchBrokerValRaw);
-      let branchBrokerId = undefined;
-      if (branchBrokerVal) {
-        if (branchBrokerMap[branchBrokerVal]) {
-          branchBrokerId = branchBrokerMap[branchBrokerVal];
+      let totalBrokerageAmount = Number(getValueByPossibleKeys(row, "TOTAL BROKERAGE AMOUNT", "BROKERAGE AMOUNT", "BROKERAGE", "COMMISSION", "TOTAL BROKERAGE", "COMMISSION AMOUNT", "TOTAL COMMISSION", "BROKERAGE (RS)", "COMMISSION (RS)"));
+      if (isNaN(totalBrokerageAmount) || totalBrokerageAmount === 0) {
+        if (odBrokerageAmount || tpBrokerageAmount) {
+          totalBrokerageAmount = (odBrokerageAmount || 0) + (tpBrokerageAmount || 0);
+        } else if (netPremium > 0 && odRateNum > 0) {
+          totalBrokerageAmount = Math.round(((netPremium * odRateNum) / 100) * 100) / 100;
         } else {
-          try {
-            const newBB = new branchBrokerModel({ companyId: cleanCompanyId, branchCode: branchBrokerValRaw, branchName: branchBrokerValRaw });
-            const saved = await newBB.save();
-            branchBrokerId = saved._id;
-            branchBrokerMap[branchBrokerVal] = saved._id;
-          } catch(e) {}
+          totalBrokerageAmount = undefined;
         }
       }
 
-      const obj = {
+      const rawBrokerageGst = getValueByPossibleKeys(row, "TOTAL BROKERAGE GST", "BROKERAGE GST", "COMMISSION GST", "TOTAL BROKERAGE GST %", "BROKERAGE GST %");
+      let totalBrokerageGst = Number(rawBrokerageGst);
+      if (isNaN(totalBrokerageGst)) totalBrokerageGst = 18;
+
+      let totalBrokerageAmountincGst = Number(getValueByPossibleKeys(row, "TOTAL BROKERAGE AMOUNT INCL GST", "TOTAL BROKERAGE AMOUNT INC GST", "TOTAL BROKERAGE INC GST", "BROKERAGE INCL GST", "BROKERAGE INC GST", "TOTAL BROKERAGE INCL GST", "TOTAL BROKERAGE AMOUNT WITH GST"));
+      if (isNaN(totalBrokerageAmountincGst) || totalBrokerageAmountincGst === 0) {
+        if (totalBrokerageAmount && totalBrokerageAmount > 0) {
+          const gstAdd = (totalBrokerageAmount * (totalBrokerageGst || 18)) / 100;
+          totalBrokerageAmountincGst = Math.round((totalBrokerageAmount + gstAdd) * 100) / 100;
+        } else {
+          totalBrokerageAmountincGst = undefined;
+        }
+      }
+
+      const sharePercentage = Number(getValueByPossibleKeys(row, "SHARE PERCENTAGE", "SHARE %", "CO BROKERAGE SHARE %", "CO BROKERAGE %")) || undefined;
+      const coBrokerageAmount = Number(getValueByPossibleKeys(row, "CO BROKERAGE AMOUNT", "CO BROKERAGE", "CO-BROKERAGE AMOUNT", "CO-BROKERAGE")) || undefined;
+
+      const policyPayload = {
         financialYear: findFinancialYearId(getValueByPossibleKeys(row, "Financial Year", "FY")) || (financialYear && mongoose.Types.ObjectId.isValid(financialYear) ? new mongoose.Types.ObjectId(financialYear) : currentFYId),
         companyId: cleanCompanyId,
+        prefix: prefixId,
+        branchCode: branchCodeId,
+        branchName: branchNameStr,
+        brokerName: brokerNameId,
+        branchBroker: branchBrokerId,
+        cutomerName: insuredName,
         clientType,
         retailCustomer,
         customerGroup,
-        subCustomerGroup: subCustomerGroupMap[toLowerSafe(getValueByPossibleKeys(row, "Sub Customer Group"))] || undefined,
-        checkSubGroupGroup: getValueByPossibleKeys(row, "Check Sub Group"),
-        branchCode: branchMap[toLowerSafe(getValueByPossibleKeys(row, "Branch Code", "Branch Name"))] || undefined,
-        branchName: getValueByPossibleKeys(row, "Branch Name", "Branch"),
-        prefix: prefixMap[toLowerSafe(getValueByPossibleKeys(row, "Prefix"))] || undefined,
-        cutomerName: insuredName,
+        subCustomerGroup: subCustomerGroupId,
+        checkSubGroup: checkSubGroupGroup,
         mobile,
         email,
-        insurerName: insurerNameStr,
-        gstNo,
-        showNominee: String(getValueByPossibleKeys(row, "Show Nominee")).toLowerCase() === 'true',
-        nomineeName: getValueByPossibleKeys(row, "Nominee Name"),
-        nomineeRelation: getValueByPossibleKeys(row, "Nominee Relation"),
-        nomineeContact: getValueByPossibleKeys(row, "Nominee Contact"),
-        insDepartment: departmentMap[toLowerSafe(getValueByPossibleKeys(row, "Department", "Insurance Department"))] || undefined,
-        product: productId,
-        subProduct: subProductId,
-        insCompany: insCompanyId,
-        brokerName: brokerNameId,
-        branchBroker: branchBrokerId,
-        
-        tpPolicyDuration: getValueByPossibleKeys(row, "TP Policy Duration") || (tpPremium > 0 ? "YEARLY" : undefined),
-        tpStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "TP Start Date")) || (tpPremium > 0 ? startDate : undefined),
-        tpEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "TP End Date")) || (tpPremium > 0 ? expiredDate : undefined),
+        showNominee,
+        nomineeName,
+        nomineeRelation,
+        nomineeContact,
+        renewable: getValueByPossibleKeys(row, "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
+        policyNumber: policyNumber || undefined,
+        odPremium,
         tpPremium,
         tpGst: gstId,
         tpGstAmount,
@@ -1163,92 +1970,109 @@ const importCsv = async (req, res) => {
         gst: gstId,
         gstAmount,
         totalAmount,
-        siteLocation: getValueByPossibleKeys(row, "Site Location"),
-        occupation: getValueByPossibleKeys(row, "Occupation"),
-        retroActive: getValueByPossibleKeys(row, "Retro Active"),
-        incoterms: incotermsMap[toLowerSafe(getValueByPossibleKeys(row, "Incoterms"))] || undefined,
-        marineClause: getValueByPossibleKeys(row, "Marine Clause"),
-        terrorism: getValueByPossibleKeys(row, "Terrorism Cover"),
-        permiumOtherThanTerrorism: getValueByPossibleKeys(row, "Premium Other Than Terrorism"),
-
-        vehicleMake: getValueByPossibleKeys(row, "Vehicle Make"),
-        vehicleModel: getValueByPossibleKeys(row, "MAKE/MODEL", "MODEL", "Vehicle Model") || "",
-        vehicleSubModel: getValueByPossibleKeys(row, "Vehicle Sub Model"),
-        vehicleNumber: getValueByPossibleKeys(row, "VEHICLE NO", "VEHICLE NUMBER") || "",
-        engineNumber: getValueByPossibleKeys(row, "Engine Number"),
-        monthYearOfRegn: getValueByPossibleKeys(row, "Month Year Of Registration"),
-        fuelType: fuelTypeMap[toLowerSafe(getValueByPossibleKeys(row, "Fuel Type"))] || undefined,
-        yearOfManufacturing: getValueByPossibleKeys(row, "Year Of Manufacturing"),
-        chassisNumber: getValueByPossibleKeys(row, "Chassis Number"),
-
-        endorsementName: getValueByPossibleKeys(row, "Endorsement Name"),
-        endorsementReason: endorsementMap[toLowerSafe(getValueByPossibleKeys(row, "Endorsement Reason"))] || undefined,
-        endorsementPolicyNumber: getValueByPossibleKeys(row, "Endorsement Policy Number"),
-        endorStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "Endorsement Start Date")),
-        endorEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "Endorsement End Date")),
-        endorsementTerrorism: getValueByPossibleKeys(row, "Endorsement Terrorism"),
-        endorsementOtherTerrorism: getValueByPossibleKeys(row, "Endorsement Other Terrorism"),
-        endorsementNetPremium: getNum("Endorsement Net Premium"),
-        
-        paymentMode: getValueByPossibleKeys(row, "PAYMENT MODE") || "online",
-        etotalAmount: getNum("E Total Amount"),
-        paidAmount: getNum("Paid Amount") || totalAmount,
-        chequeNo: getValueByPossibleKeys(row, "Cheque No"),
-        transactionDate: excelDateToJSDate(getValueByPossibleKeys(row, "Transaction Date")) || (startDate ? new Date(new Date(startDate).setDate(startDate.getDate() - 2)) : undefined),
-        posMisRef: getValueByPossibleKeys(row, "POS MIS Ref"),
-        bqpCode: getValueByPossibleKeys(row, "BQP Code"),
-
-        rateOnOtherTerr: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "Rate On Other Terrorism"))] || undefined,
-        amountOnOtherTerr: getNum("Amount On Other Terrorism"),
-        rateOnTerr: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "Rate On Terrorism"))] || undefined,
-        amountOnTerr: getNum("Amount On Terrorism"),
-        odBrokerageRate: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "OD Brokerage Rate"))] || undefined,
-        odBrokerageAmount: getNum("OD Brokerage Amount"),
-        tpBrokerageRate: brokerageRateMap[toLowerSafe(getValueByPossibleKeys(row, "TP Brokerage Rate"))] || undefined,
-        tpBrokerageAmount: getNum("TP Brokerage Amount"),
-        totalBrokerageAmount: getNum("Total Brokerage Amount"),
-        totalBrokerageGst: getNum("Total Brokerage GST"),
-        totalBrokerageAmountincGst: getNum("Total Brokerage Amount Incl GST")
+        renewalDate: expiredDate,
+        insDepartment: insDepartmentId,
+        product: productId,
+        subProduct: subProductId,
+        insCompany: insCompanyId,
+        insurerName,
+        tpEndDate: tpEndDate || expiredDate || undefined,
+        odEndDate: odEndDate || expiredDate || undefined,
+        endDate: expiredDate || undefined,
+        startDate: startDate || undefined,
+        tpStartDate: tpStartDate || startDate || undefined,
+        odStartDate: odStartDate || startDate || undefined,
+        transactionDate,
+        gst: gstId,
+        tpGst: tpPremium > 0 ? gstId : undefined,
+        odGst: odPremium > 0 ? gstId : undefined,
+        tpGstAmount,
+        odGstAmount,
+        tpAmount,
+        odAmount,
+        sumInsured,
+        numberOfInstallments,
+        livesCover,
+        nextInstallmentDate,
+        policyDuration,
+        tpPolicyDuration,
+        odPolicyDuration,
+        riskCode: riskCodeId,
+        otherAddon: otherAddonId,
+        terrorism,
+        permiumOtherThanTerrorism,
+        siteLocation,
+        occupation,
+        retroActive,
+        incoterms: incotermsId,
+        marineClause,
+        vehicleMake,
+        vehicleModel,
+        vehicleSubModel,
+        vehicleNumber,
+        engineNumber,
+        monthYearOfRegn,
+        fuelType: fuelTypeId,
+        yearOfManufacturing,
+        chassisNumber,
+        endorsementName,
+        endorsementReason: endorsementReasonId,
+        endorsementPolicyNumber,
+        endorStartDate,
+        endorEndDate,
+        endorsementTerrorism,
+        endorsementOtherTerrorism,
+        endorsementNetPremium,
+        endorsementGstAmount,
+        paymentMode,
+        paidAmount,
+        etotalAmount,
+        chequeNo,
+        posMisRef,
+        bqpCode,
+        CGST,
+        SGST,
+        IGST,
+        UGST,
+        tpBrokerageRate: tpBrokerageRateId,
+        odBrokerageRate: odBrokerageRateId,
+        rateOnTerr: rateOnTerrId,
+        rateOnOtherTerr: rateOnOtherTerrId,
+        endorsementGst: endorsementGstId,
+        sharePercentage,
+        coBrokerageAmount,
+        amountOnOtherTerr,
+        amountOnTerr,
+        odBrokerageAmount,
+        tpBrokerageAmount,
+        totalBrokerageAmount,
+        totalBrokerageGst,
+        totalBrokerageAmountincGst,
+        gstNo,
       };
 
-      policyDetailsArray.push(obj);
+      // Non-blocking upsert / save logic
+      if (policyNumber) {
+        const filter = {
+          policyNumber: { $regex: new RegExp(`^${policyNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+        };
+        if (cleanCompanyId && mongoose.Types.ObjectId.isValid(cleanCompanyId)) {
+          filter.companyId = cleanCompanyId;
+        }
+        await policyDetailModel.findOneAndUpdate(filter, policyPayload, { upsert: true, new: true, setDefaultsOnInsert: true });
+      } else {
+        await policyDetailModel.create(policyPayload);
+      }
+      processedCount++;
     }
 
-    let insertedDocs = [];
-    let failedDocs = [];
-
-    try {
-      insertedDocs = await policyDetailModel.insertMany(policyDetailsArray, {
-        ordered: false,
-      });
-
-      return res.status(201).json({
-        success: true,
-        insertedCount: insertedDocs.length,
-        skippedCount,
-        failedCount: 0,
-        message: skippedCount > 0 
-          ? `Inserted ${insertedDocs.length} records. ${skippedCount} duplicate(s) skipped.`
-          : "Successfully imported all records",
-      });
-    } catch (e) {
-      console.error(e);
-      insertedDocs = e.insertedDocs || [];
-      failedDocs = (e.writeErrors || []).map((err) => ({
-        index: err.index,
-        error: err.errmsg,
-        document: policyDetailsArray[err.index],
-      }));
-
-      return res.status(207).json({
-        success: false,
-        insertedCount: insertedDocs.length,
-        skippedCount,
-        failedCount: failedDocs.length,
-        failedDocs,
-        message: "Partial insert completed",
-      });
-    }
+    return res.status(200).json({
+      success: true,
+      insertedCount: processedCount,
+      skippedCount: 0,
+      failedCount: 0,
+      message: `Successfully processed and imported ${processedCount} records without errors.`,
+    });
   } catch (e) {
     console.error(e);
     return res

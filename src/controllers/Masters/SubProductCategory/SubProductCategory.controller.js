@@ -13,9 +13,29 @@ const getSubProductCategoryController = async (req, res) => {
     // log
     console.log("Admin ID from token:", Id);
 
-    const subCategories = await SubProductCategoryModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    }).sort({ createdAt: -1 }); // Descending
+    let query = {};
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query = {
+          $or: [
+            { companyId: new mongoose.Types.ObjectId(companyId) },
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      }
+    }
+
+    const subCategories = await SubProductCategoryModel.find(query).sort({ createdAt: -1 }); // Descending
 
     if (!subCategories || subCategories.length === 0) {
       return res.status(404).json({

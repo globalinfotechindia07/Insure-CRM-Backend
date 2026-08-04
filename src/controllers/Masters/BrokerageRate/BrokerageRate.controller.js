@@ -7,22 +7,37 @@ const { brokerageRateModel } = require("../../../models/index");
 const getBrokerageRateController = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const brokerageRates = await brokerageRateModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    });
-    if (!brokerageRates || brokerageRates.length === 0) {
-      return res.status(200).json({ status: "true", data: [] });
+    const query = {};
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
+      query.$or = [
+        { companyId: new mongoose.Types.ObjectId(companyId) },
+        { companyId: companyId },
+        { companyId: null },
+        { companyId: { $exists: false } }
+      ];
     }
-    // sort data from newest to oldest
-    brokerageRates.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
-
-    res.status(200).json({ status: "true", data: brokerageRates });
+    let brokerageRates = await brokerageRateModel.find(query).sort({ createdAt: -1 });
+    if (!brokerageRates || brokerageRates.length === 0) {
+      const defaultRates = [0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25];
+      const createdDocs = [];
+      for (const rate of defaultRates) {
+        try {
+          const doc = await brokerageRateModel.create({
+            brokerageRate: rate,
+            companyId: (companyId && mongoose.Types.ObjectId.isValid(companyId)) ? companyId : null
+          });
+          createdDocs.push(doc);
+        } catch (e) {
+          // ignore duplicate key errors if concurrent
+        }
+      }
+      brokerageRates = await brokerageRateModel.find({}).sort({ brokerageRate: 1 });
+    }
+    res.status(200).json({ status: "true", data: brokerageRates || [] });
   } catch (error) {
     res.status(500).json({
       status: "false",
-      message: ["Error fetching positions", error.message],
+      message: ["Error fetching brokerage rates", error.message],
     });
   }
 };

@@ -43,18 +43,19 @@ const createGst = async (req, res) => {
 const getAllGsts = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const gsts = await GstPercentageModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-      isDeleted: false,
-    });
-    if (!gsts || gsts.length === 0) {
-      return res.status(404).json({ message: "No GST Percentages found" });
+    const query = { isDeleted: false };
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
+      query.$or = [
+        { companyId: new mongoose.Types.ObjectId(companyId) },
+        { companyId: companyId },
+        { companyId: null },
+        { companyId: { $exists: false } }
+      ];
     }
-    // Sort by createdAt in descending order
-    gsts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const gsts = await GstPercentageModel.find(query).sort({ createdAt: -1 });
     res.status(200).json({
       message: "GST Percentages retrieved successfully",
-      data: gsts,
+      data: gsts || [],
     });
   } catch (err) {
     console.error("Error retrieving GST Percentages:", err);

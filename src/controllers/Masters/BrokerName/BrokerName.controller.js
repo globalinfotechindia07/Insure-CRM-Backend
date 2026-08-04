@@ -4,9 +4,28 @@ const { brokerNameModel } = require("../../../models/index");
 const getBrokerNameController = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const brokerNames = await brokerNameModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    });
+    let query = {};
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query = {
+          $or: [
+            { companyId: new mongoose.Types.ObjectId(companyId) },
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      }
+    }
+    const brokerNames = await brokerNameModel.find(query);
     if (!brokerNames || brokerNames.length === 0) {
       return res
         .status(404)
