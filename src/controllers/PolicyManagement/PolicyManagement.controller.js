@@ -1000,8 +1000,7 @@ const importCsv = async (req, res) => {
       return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    const toLowerSafe = (val) =>
-      val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
+    const toLowerSafe = (val) => val !== undefined && val !== null ? String(val).toLowerCase().trim() : "";
 
     const insDepartments = await insDepartmentModel.find({});
     const insCompanies = await insCompanyModel.find({});
@@ -1491,15 +1490,10 @@ const importCsv = async (req, res) => {
           const selectedFYDoc = financialYears.find(fy => fy._id.toString() === financialYear.toString());
           if (selectedFYDoc) {
             const selectedStartYear = new Date(selectedFYDoc.fromDate).getFullYear();
-            if (selectedStartYear === startYear) {
-              return selectedFYDoc._id;
-            }
+            if (selectedStartYear === startYear) return selectedFYDoc._id;
           }
         }
-        const fyDoc = financialYears.find(fy => {
-          const fyStart = new Date(fy.fromDate).getFullYear();
-          return fyStart === startYear;
-        });
+        const fyDoc = financialYears.find(fy => new Date(fy.fromDate).getFullYear() === startYear);
         if (fyDoc) return fyDoc._id;
       }
       return undefined;
@@ -1540,16 +1534,12 @@ const importCsv = async (req, res) => {
       const cleanKeys = keys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
       for (const rowKey of Object.keys(row)) {
         const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanKeys.includes(cleanRowKey)) {
-          return row[rowKey];
-        }
+        if (cleanKeys.includes(cleanRowKey)) return row[rowKey];
       }
       for (const rowKey of Object.keys(row)) {
         const cleanRowKey = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '');
         for (const cleanK of cleanKeys) {
-          if (cleanRowKey.includes(cleanK) || cleanK.includes(cleanRowKey)) {
-            return row[rowKey];
-          }
+          if (cleanRowKey.includes(cleanK) || cleanK.includes(cleanRowKey)) return row[rowKey];
         }
       }
       return undefined;
@@ -1598,20 +1588,12 @@ const importCsv = async (req, res) => {
             const savedGroup = await newGroup.save();
             customerGroup = savedGroup._id;
             groupMap[insuredNameKey] = savedGroup._id;
-
             try {
               const legacyCustomer = new Customer({
-                clientType: "corporate",
-                customerId: "GRP" + Date.now(),
-                customerName: insuredName,
-                email: email,
-                mobile: mobile,
-                gst: gstNo
+                clientType: "corporate", customerId: "GRP" + Date.now(), customerName: insuredName, email, mobile, gst: gstNo
               });
               await legacyCustomer.save();
-            } catch (err) {
-              console.error("Error saving corporate group to Customer Master during import:", err);
-            }
+            } catch (err) {}
           }
         } else {
           if (customerMap[insuredNameKey]) {
@@ -1621,42 +1603,25 @@ const importCsv = async (req, res) => {
             let nextId = "CUST001";
             if (lastCustomer && lastCustomer.customerId) {
               const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
-              if (!isNaN(lastNum)) {
-                nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
-              }
+              if (!isNaN(lastNum)) nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
             }
-
             const newCustomer = new CustomerRegistrationModel({
-              customerType: "retail",
-              customerId: nextId,
-              name: insuredName,
-              email: email,
-              mobile: mobile,
-              gstNo: gstNo,
+              customerType: "retail", customerId: nextId, name: insuredName, email, mobile, gstNo: gstNo,
               createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined,
             });
             const savedCustomer = await newCustomer.save();
             retailCustomer = savedCustomer._id;
             customerMap[insuredNameKey] = savedCustomer._id;
-
             try {
               const legacyCustomer = new Customer({
-                clientType: "retail",
-                customerId: nextId,
-                customerName: insuredName,
-                email: email,
-                mobile: mobile,
-                gst: gstNo
+                clientType: "retail", customerId: nextId, customerName: insuredName, email, mobile, gst: gstNo
               });
               await legacyCustomer.save();
-            } catch (err) {
-              console.error("Error saving retail customer to Customer Master during import:", err);
-            }
+            } catch (err) {}
           }
         }
       }
 
-      // Dynamic Masters Resolution
       const rawPrefix = getValueByPossibleKeys(row, "PREFIX", "TITLE", "SALUTATION", "CUSTOMER PREFIX", "MR/MRS", "HONORIFIC", "PREFIX NAME");
       const prefixId = await resolvePrefix(rawPrefix);
 
@@ -1972,7 +1937,37 @@ const importCsv = async (req, res) => {
         policyNumber: policyNumber || undefined,
         odPremium,
         tpPremium,
+        tpGst: gstId,
+        tpGstAmount,
+        tpAmount,
+
+        odPolicyDuration: getValueByPossibleKeys(row, "OD Policy Duration") || (odPremium > 0 ? "YEARLY" : undefined),
+        odStartDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD Start Date")) || (odPremium > 0 ? startDate : undefined),
+        odEndDate: excelDateToJSDate(getValueByPossibleKeys(row, "OD End Date")) || (odPremium > 0 ? expiredDate : undefined),
+        odPremium,
+        odGst: gstId,
+        odGstAmount,
+        odAmount,
+
+        policyNumber,
+        renewalDate: excelDateToJSDate(getValueByPossibleKeys(row, "Renewal Date", "RENEWAL/ROLLOVER")) || expiredDate,
+        sumInsured: getNum("Sum Insured"),
+        renewable: getValueByPossibleKeys(row, "Renewable", "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
+        numberOfInstallments: getValueByPossibleKeys(row, "Number Of Installments"),
+        livesCover: getValueByPossibleKeys(row, "Lives Covered"),
+        nextInstallmentDate: excelDateToJSDate(getValueByPossibleKeys(row, "Next Installment Date")),
+        policyDuration: getValueByPossibleKeys(row, "Policy Duration") || "YEARLY",
+        startDate,
+        endDate: expiredDate,
+        riskCode: getValueByPossibleKeys(row, "Risk Code"),
+        otherAddon: otherAddonMap[toLowerSafe(getValueByPossibleKeys(row, "Other Addon"))] || undefined,
+        terrirism: getValueByPossibleKeys(row, "Terrorism"),
         netPremium,
+        CGST: getValueByPossibleKeys(row, "CGST"),
+        SGST: getValueByPossibleKeys(row, "SGST"),
+        IGST: getValueByPossibleKeys(row, "IGST"),
+        UGST: getValueByPossibleKeys(row, "UGST"),
+        gst: gstId,
         gstAmount,
         totalAmount,
         renewalDate: expiredDate,
@@ -2085,7 +2080,6 @@ const importCsv = async (req, res) => {
       .json({ success: false, error: e.message });
   }
 };
-
 const exportCsv = async (req, res) => {
   const { companyId } = req.query;
 
