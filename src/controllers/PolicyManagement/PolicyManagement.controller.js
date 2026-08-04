@@ -1951,7 +1951,7 @@ const importCsv = async (req, res) => {
 
         policyNumber,
         renewalDate: excelDateToJSDate(getValueByPossibleKeys(row, "Renewal Date", "RENEWAL/ROLLOVER")) || expiredDate,
-        sumInsured: getNum("Sum Insured"),
+        sumInsured: sumInsured || Number(getValueByPossibleKeys(row, "SUM INSURED", "SUM INSURED (RS)", "SUM_INSURED", "SI")) || undefined,
         renewable: getValueByPossibleKeys(row, "Renewable", "RENEWAL/ROLLOVER", "RENEWAL") || "RENEWAL",
         numberOfInstallments: getValueByPossibleKeys(row, "Number Of Installments"),
         livesCover: getValueByPossibleKeys(row, "Lives Covered"),
