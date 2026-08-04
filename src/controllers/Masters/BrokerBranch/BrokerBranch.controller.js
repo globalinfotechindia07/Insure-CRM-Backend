@@ -5,9 +5,28 @@ const BrokerBranchModel = require("../../../models/Masters/BrokerBranch/BrokerBr
 const getBrokerBranchController = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const brokerBranch = await BrokerBranchModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    })
+    let query = {};
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query = {
+          $or: [
+            { companyId: new mongoose.Types.ObjectId(companyId) },
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      }
+    }
+    const brokerBranch = await BrokerBranchModel.find(query)
       .sort({ createdAt: -1 })
       .lean();
     res.status(200).json({ status: "true", data: brokerBranch });

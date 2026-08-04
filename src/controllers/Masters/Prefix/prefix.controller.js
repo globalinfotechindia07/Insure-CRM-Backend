@@ -34,10 +34,24 @@ const addPrefix = async (req, res) => {
 const getPrefix = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const allPrefix = await PrefixModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-      delete: false,
-    });
+    let query = { delete: { $ne: true } };
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query.$or = [
+          { companyId: new mongoose.Types.ObjectId(companyId) },
+          { companyId: String(companyId) },
+          { companyId: { $exists: false } },
+          { companyId: null }
+        ];
+      } else {
+        query.$or = [
+          { companyId: String(companyId) },
+          { companyId: { $exists: false } },
+          { companyId: null }
+        ];
+      }
+    }
+    const allPrefix = await PrefixModel.find(query);
     if (!allPrefix || allPrefix.length === 0) {
       return res.status(httpStatus.NOT_FOUND).json({ msg: "No prefix found" });
     }

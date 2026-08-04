@@ -5,8 +5,25 @@ const getInsDepartmentController = async (req, res) => {
   try {
      const { companyId } = req.query;
      let query = {};
-     if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
-       query.companyId = new mongoose.Types.ObjectId(companyId);
+     if (companyId) {
+       if (mongoose.Types.ObjectId.isValid(companyId)) {
+         query = {
+           $or: [
+             { companyId: new mongoose.Types.ObjectId(companyId) },
+             { companyId: String(companyId) },
+             { companyId: { $exists: false } },
+             { companyId: null }
+           ]
+         };
+       } else {
+         query = {
+           $or: [
+             { companyId: String(companyId) },
+             { companyId: { $exists: false } },
+             { companyId: null }
+           ]
+         };
+       }
      }
 
      const insDepartments = await insDepartmentModel.find(query);

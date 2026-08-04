@@ -98,7 +98,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     insCompany: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
+      ref: "insCompany",
       set: (v) => (v === "" ? null : v),
     },
     product: {
