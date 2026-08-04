@@ -1692,9 +1692,36 @@ const importCsv = async (req, res) => {
         netPremium = Math.max(0, totalAmount - gstAmount);
       }
 
-      const rawGstHeader = getValueByPossibleKeys(row, "GST RATE", "GST %", "GST PERCENTAGE", "TAX RATE", "TAX %", "GST PER");
-      let gstRate = rawGstHeader !== undefined ? Number(rawGstHeader) : (netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 18);
-      if (isNaN(gstRate)) gstRate = 18;
+      const parseGstNumber = (rawVal) => {
+        if (rawVal === undefined || rawVal === null || rawVal === "") return undefined;
+        let str = String(rawVal).trim();
+        if (str.endsWith("%")) str = str.slice(0, -1).trim();
+        let num = Number(str);
+        if (isNaN(num)) return undefined;
+        if (num > 0 && num < 1) num = Math.round(num * 100);
+        return Math.round(num * 100) / 100;
+      };
+
+      const rawGstHeader = getValueByPossibleKeys(
+        row,
+        "GST RATE",
+        "GST %",
+        "GST PERCENTAGE",
+        "TAX RATE",
+        "TAX %",
+        "GST PER",
+        "GST (%)",
+        "GST",
+        "TP GST",
+        "OD GST",
+        "TAX"
+      );
+
+      let gstRate = parseGstNumber(rawGstHeader);
+      if (gstRate === undefined) {
+        gstRate = netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 18;
+      }
+      if (isNaN(gstRate) || gstRate <= 0) gstRate = 18;
 
       let gstDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(gstRate));
       if (!gstDoc) {
