@@ -128,7 +128,7 @@ const policyDetailSchema = new mongoose.Schema(
       type: Date,
     },
     tpEndDate: {
-      type: Date,
+      type: mongoose.Schema.Types.Mixed,
     },
     tpPremium: {
       type: String,
@@ -151,7 +151,7 @@ const policyDetailSchema = new mongoose.Schema(
       type: Date,
     },
     odEndDate: {
-      type: Date,
+      type: mongoose.Schema.Types.Mixed,
     },
     odPremium: {
       type: String,
@@ -171,7 +171,7 @@ const policyDetailSchema = new mongoose.Schema(
       type: String,
     },
     renewalDate: {
-      type: Date,
+      type: mongoose.Schema.Types.Mixed,
     },
     sumInsured: {
       type: Number,
@@ -196,7 +196,7 @@ const policyDetailSchema = new mongoose.Schema(
       type: Date,
     },
     endDate: {
-      type: Date,
+      type: mongoose.Schema.Types.Mixed,
     },
     riskCode: {
       type: String,
@@ -302,7 +302,7 @@ const policyDetailSchema = new mongoose.Schema(
     },
     endorsementReason: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "endorsementReason",
+      ref: "endorsement",
       set: (v) => (v === "" ? null : v),
     },
     endorsementPolicyNumber: {
