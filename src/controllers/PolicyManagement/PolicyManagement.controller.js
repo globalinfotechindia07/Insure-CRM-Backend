@@ -132,7 +132,7 @@ const getPolicyDetail = async (req, res) => {
       if (seenIds.has(idStr)) continue;
       seenIds.add(idStr);
 
-      const polObj = policy.toObject ? policy.toObject() : policy;
+      const polObj = policy.toJSON ? JSON.parse(JSON.stringify(policy)) : JSON.parse(JSON.stringify(policy));
       const effectiveEndDate = polObj.endDate || polObj.renewalDate || polObj.odEndDate || polObj.tpEndDate;
       if (effectiveEndDate) {
         if (!polObj.renewalDate) polObj.renewalDate = effectiveEndDate;
@@ -182,7 +182,7 @@ const ensureCustomerExists = async (body, companyId) => {
     }
 
     if (existingGroup) {
-      customerGroup = existingGroup._id;
+      customerGroup = existingGroup._id.toString();
     } else {
       const newGroup = new customerGroupModel({
         companyId: cleanCompanyId,
@@ -193,7 +193,7 @@ const ensureCustomerExists = async (body, companyId) => {
         createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined
       });
       const savedGroup = await newGroup.save();
-      customerGroup = savedGroup._id;
+      customerGroup = savedGroup._id.toString();
 
       // Sync with Customer Master
       try {
@@ -232,7 +232,7 @@ const ensureCustomerExists = async (body, companyId) => {
     }
 
     if (existingCustomer) {
-      retailCustomer = existingCustomer._id;
+      retailCustomer = existingCustomer._id.toString();
     } else {
       const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
       let nextId = "CUST001";
@@ -254,7 +254,7 @@ const ensureCustomerExists = async (body, companyId) => {
         createdBy: companyId ? new mongoose.Types.ObjectId(companyId) : undefined
       });
       const savedCustomer = await newCustomer.save();
-      retailCustomer = savedCustomer._id;
+      retailCustomer = savedCustomer._id.toString();
 
       // Sync with Customer Master
       try {
@@ -554,7 +554,7 @@ const postPolicyDetail = async (req, res) => {
       coBrokerageAmount,
     } = req.body;
 
-    const cleanCompanyId = companyId || req.body.companyId;
+    const cleanCompanyId = req.query?.companyId || req.body?.companyId;
 
     // 🔍 Duplicate Policy Check
     const cleanPolicyNo = policyNumber ? String(policyNumber).trim() : "";
@@ -705,7 +705,7 @@ const postPolicyDetail = async (req, res) => {
       totalBrokerageAmountincGst,
       sharePercentage: req.body.sharePercentage || undefined,
       coBrokerageAmount: req.body.coBrokerageAmount || undefined,
-      companyId,
+      companyId: cleanCompanyId,
     });
 
     await newPolicyDetail.save();
@@ -759,7 +759,7 @@ const getPolicyDetailById = async (req, res) => {
         .json({ success: false, message: "Policy not found" });
     }
 
-    let policyObj = policy.toObject();
+    let policyObj = JSON.parse(JSON.stringify(policy));
     let modified = false;
 
     // Self-repair if float serial date ended up in renewable field
@@ -810,6 +810,18 @@ const getPolicyDetailById = async (req, res) => {
     if (!policy.odEndDate && (policy.endDate || policy.renewalDate)) {
       policy.odEndDate = policy.endDate || policy.renewalDate;
       policyObj.odEndDate = policy.endDate || policy.renewalDate;
+      modified = true;
+    }
+    // Also fill renewalDate/endDate if they are empty but odEndDate/tpEndDate are present
+    const effectiveEnd = policy.odEndDate || policy.tpEndDate;
+    if (!policy.renewalDate && effectiveEnd) {
+      policy.renewalDate = effectiveEnd;
+      policyObj.renewalDate = effectiveEnd;
+      modified = true;
+    }
+    if (!policy.endDate && effectiveEnd) {
+      policy.endDate = effectiveEnd;
+      policyObj.endDate = effectiveEnd;
       modified = true;
     }
 
@@ -908,7 +920,6 @@ const updatePolicyDetail = async (req, res) => {
       }
     }
 
-    // Update only provided fields; $set ensures only changed fields are updated.
     const updatedPolicyDetail = await policyDetailModel.findByIdAndUpdate(
       policyId,
       { $set: updateData },
@@ -1525,6 +1536,7 @@ const importCsv = async (req, res) => {
       if (typeof excelDate === "string") {
         const str = excelDate.trim();
         if (!str) return null;
+        if (str.toUpperCase() === "TILL END OF VOYAGE") return "TILL END OF VOYAGE";
         if (/^\d+(\.\d+)?$/.test(str)) {
           return new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
         }
@@ -1728,43 +1740,70 @@ const importCsv = async (req, res) => {
         "TAX %",
         "GST PER",
         "GST (%)",
-        "GST",
-        "TP GST",
-        "OD GST",
         "TAX"
       );
+      const rawTpGstHeader = getValueByPossibleKeys(row, "TP GST", "TP GST RATE", "TP GST %", "TP TAX", "TP TAX %");
+      const rawOdGstHeader = getValueByPossibleKeys(row, "OD GST", "OD GST RATE", "OD GST %", "OD TAX", "OD TAX %");
+
+      let tpGstAmountExcel = Number(getValueByPossibleKeys(row, "TP GST AMOUNT", "TP GST AMT", "TP TAX AMOUNT"));
+      let odGstAmountExcel = Number(getValueByPossibleKeys(row, "OD GST AMOUNT", "OD GST AMT", "OD TAX AMOUNT"));
 
       let gstRate = parseGstNumber(rawGstHeader);
+      if (gstRate > 50) gstRate = undefined;
+      
+      const isHealth = (rawDept || "").toLowerCase().includes("health");
+      
       if (gstRate === undefined) {
-        gstRate = netPremium > 0 ? Math.round((gstAmount / netPremium) * 100) : 18;
-      }
-      if (isNaN(gstRate) || gstRate <= 0) gstRate = 18;
-
-      let gstDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(gstRate));
-      if (!gstDoc) {
-        let existingGst = await GstPercentageModel.findOne({
-          value: gstRate,
-          isDeleted: false
-        });
-        if (!existingGst) {
-          existingGst = new GstPercentageModel({
-            companyId: cleanCompanyId,
-            value: gstRate,
-            cgst: gstRate / 2,
-            sgst: gstRate / 2,
-            igst: gstRate,
-            ugst: 0,
-            effectiveFrom: new Date("2020-01-01")
-          });
-          await existingGst.save();
+        if (isHealth && !rawGstHeader && !gstAmount) {
+          gstRate = undefined;
+        } else {
+          gstRate = (gstAmount && netPremium > 0) ? Math.round((gstAmount / netPremium) * 100) : 0;
         }
-        gstPercentages.push(existingGst);
-        gstDoc = existingGst;
       }
-      const gstId = gstDoc?._id || undefined;
+      if (gstRate !== undefined && (isNaN(gstRate) || gstRate < 0)) gstRate = 0;
 
-      const tpGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0;
-      const odGstAmount = netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0;
+      const resolveGstMaster = async (rate) => {
+        let gDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(rate));
+        if (!gDoc) {
+          let existing = await GstPercentageModel.findOne({ value: rate, isDeleted: false });
+          if (!existing) {
+            existing = new GstPercentageModel({
+              companyId: cleanCompanyId,
+              value: rate,
+              cgst: rate / 2,
+              sgst: rate / 2,
+              igst: rate,
+              ugst: 0,
+              effectiveFrom: new Date("2020-01-01")
+            });
+            await existing.save();
+          }
+          gstPercentages.push(existing);
+          gDoc = existing;
+        }
+        return gDoc._id;
+      };
+
+      const gstId = gstRate !== undefined ? await resolveGstMaster(gstRate) : undefined;
+
+      let tpGstRate = parseGstNumber(rawTpGstHeader);
+      let tpGstId = undefined;
+      if (tpGstRate !== undefined && tpGstRate <= 50 && !isNaN(tpGstRate) && tpGstRate >= 0) {
+        tpGstId = await resolveGstMaster(tpGstRate);
+      } else {
+        tpGstId = tpPremium > 0 ? gstId : undefined;
+      }
+
+      let odGstRate = parseGstNumber(rawOdGstHeader);
+      let odGstId = undefined;
+      if (odGstRate !== undefined && odGstRate <= 50 && !isNaN(odGstRate) && odGstRate >= 0) {
+        odGstId = await resolveGstMaster(odGstRate);
+      } else {
+        odGstId = odPremium > 0 ? gstId : undefined;
+      }
+
+      const tpGstAmount = !isNaN(tpGstAmountExcel) ? tpGstAmountExcel : (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (tpPremium / netPremium)) * 100) / 100) : 0);
+      const odGstAmount = !isNaN(odGstAmountExcel) ? odGstAmountExcel : (netPremium > 0 ? Math.max(0, Math.round((gstAmount * (odPremium / netPremium)) * 100) / 100) : 0);
       const tpAmount = tpPremium + tpGstAmount;
       const odAmount = odPremium + odGstAmount;
 
@@ -1784,14 +1823,18 @@ const importCsv = async (req, res) => {
 
       let startDate = excelDateToJSDate(rawStartDate) || odStartDate || tpStartDate || null;
 
-      if (!startDate && expiredDate) {
+      if (!startDate && expiredDate && expiredDate !== "TILL END OF VOYAGE") {
         startDate = new Date(expiredDate);
         startDate.setFullYear(startDate.getFullYear() - 1);
         startDate.setDate(startDate.getDate() + 1);
       } else if (startDate && !expiredDate) {
-        expiredDate = new Date(startDate);
-        expiredDate.setFullYear(expiredDate.getFullYear() + 1);
-        expiredDate.setDate(expiredDate.getDate() - 1);
+        if (getValueByPossibleKeys(row, "Policy Duration") === "TILL END OF VOYAGE") {
+          expiredDate = "TILL END OF VOYAGE";
+        } else {
+          expiredDate = new Date(startDate);
+          expiredDate.setFullYear(expiredDate.getFullYear() + 1);
+          expiredDate.setDate(expiredDate.getDate() - 1);
+        }
       }
 
       const finalRenewalDate = parsedRenewalDate || odEndDate || tpEndDate || expiredDate || null;
@@ -1820,10 +1863,18 @@ const importCsv = async (req, res) => {
       let policyDuration = "YEARLY";
       if (rawDuration.includes("QUARTER")) policyDuration = "QUARTERLY";
       else if (rawDuration.includes("MONTH")) policyDuration = "MONTHLY";
+      else if (rawDuration.includes("DAY")) policyDuration = "DAYS";
       else if (rawDuration) policyDuration = rawDuration;
+      else if (startDate && finalEndDate) {
+        const diffTime = Math.abs(finalEndDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 31) policyDuration = "MONTHLY";
+        else if (diffDays <= 92) policyDuration = "QUARTERLY";
+        else policyDuration = "YEARLY";
+      }
 
-      const tpPolicyDuration = String(getValueByPossibleKeys(row, "TP POLICY DURATION", "TP DURATION", "TP TERM", "TP PERIOD") || "YEARLY").trim().toUpperCase() || "YEARLY";
-      const odPolicyDuration = String(getValueByPossibleKeys(row, "OD POLICY DURATION", "OD DURATION", "OD TERM", "OD PERIOD") || "YEARLY").trim().toUpperCase() || "YEARLY";
+      const tpPolicyDuration = String(getValueByPossibleKeys(row, "TP POLICY DURATION", "TP DURATION", "TP TERM", "TP PERIOD") || policyDuration).trim().toUpperCase();
+      const odPolicyDuration = String(getValueByPossibleKeys(row, "OD POLICY DURATION", "OD DURATION", "OD TERM", "OD PERIOD") || policyDuration).trim().toUpperCase();
 
       const terrorism = String(getValueByPossibleKeys(row, "TERRORISM", "TERRORISM COVER", "TERRORISM PREMIUM") || "").trim();
       const permiumOtherThanTerrorism = String(getValueByPossibleKeys(row, "PREMIUM OTHER THAN TERRORISM", "PREMIUM OTHER THAN TERROR") || "").trim();
@@ -1994,7 +2045,7 @@ const importCsv = async (req, res) => {
         policyNumber: policyNumber || undefined,
         odPremium,
         tpPremium,
-        tpGst: gstId,
+        tpGst: tpGstId,
         tpGstAmount,
         tpAmount,
 
@@ -2002,7 +2053,7 @@ const importCsv = async (req, res) => {
         odStartDate: finalOdStartDate || undefined,
         odEndDate: finalOdEndDate || undefined,
         odPremium,
-        odGst: gstId,
+        odGst: odGstId,
         odGstAmount,
         odAmount,
 
@@ -2038,8 +2089,8 @@ const importCsv = async (req, res) => {
         odStartDate: finalOdStartDate || undefined,
         transactionDate,
         gst: gstId,
-        tpGst: tpPremium > 0 ? gstId : undefined,
-        odGst: odPremium > 0 ? gstId : undefined,
+        tpGst: tpGstId,
+        odGst: odGstId,
         tpGstAmount,
         odGstAmount,
         tpAmount,
@@ -2180,7 +2231,7 @@ const exportCsv = async (req, res) => {
       .populate("endorsementGst");
 
     const exportData = policyData.map((p) => {
-      const obj = p.toObject();
+      const obj = JSON.parse(JSON.stringify(p));
 
       return {
         ...obj,
@@ -2268,10 +2319,6 @@ const exportCsv = async (req, res) => {
       { label: "Terrorism", value: "terrorism" },
       { label: "Net Premium", value: "netPremium" },
 
-      { label: "CGST", value: "CGST" },
-      { label: "SGST", value: "SGST" },
-      { label: "IGST", value: "IGST" },
-      { label: "UGST", value: "UGST" },
       { label: "GST", value: "gst" },
       { label: "GST Amount", value: "gstAmount" },
       { label: "Total Amount", value: "totalAmount" },
