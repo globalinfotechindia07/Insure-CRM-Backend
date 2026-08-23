@@ -447,6 +447,35 @@ const ensureMastersExist = async (body, companyId) => {
   if (body.rateOnTerr) resolved.rateOnTerr = await resolveSingleBrokerageRate(body.rateOnTerr);
   if (body.rateOnOtherTerr) resolved.rateOnOtherTerr = await resolveSingleBrokerageRate(body.rateOnOtherTerr);
 
+  const resolveSingleGstRate = async (rateVal) => {
+    if (!rateVal) return undefined;
+    if (mongoose.Types.ObjectId.isValid(rateVal)) return rateVal;
+    let num = NaN;
+    if (typeof rateVal === "number") {
+      num = rateVal;
+    } else {
+      const cleanStr = String(rateVal).replace(/%/g, "").trim();
+      const parsed = Number(cleanStr);
+      if (!isNaN(parsed)) num = parsed;
+    }
+    if (isNaN(num)) return undefined;
+    try {
+      let doc = await GstPercentageModel.findOne({ value: String(num) });
+      if (!doc) {
+        doc = await GstPercentageModel.create({ value: String(num) });
+      }
+      return doc._id;
+    } catch (gstErr) {
+      console.error("Error resolving GST rate in ensureMastersExist:", gstErr);
+      return undefined;
+    }
+  };
+
+  if (body.gst) resolved.gst = await resolveSingleGstRate(body.gst);
+  if (body.tpGst) resolved.tpGst = await resolveSingleGstRate(body.tpGst);
+  if (body.odGst) resolved.odGst = await resolveSingleGstRate(body.odGst);
+  if (body.endorsementGst) resolved.endorsementGst = await resolveSingleGstRate(body.endorsementGst);
+
   return resolved;
 };
 
@@ -632,14 +661,14 @@ const postPolicyDetail = async (req, res) => {
       tpStartDate,
       tpEndDate,
       tpPremium,
-      tpGst,
+      tpGst: resolvedMasters.tpGst || req.body.tpGst || undefined,
       tpGstAmount,
       tpAmount,
       odPolicyDuration,
       odStartDate,
       odEndDate,
       odPremium,
-      odGst,
+      odGst: resolvedMasters.odGst || req.body.odGst || undefined,
       odGstAmount,
       odAmount,
       policyNumber,
@@ -656,7 +685,7 @@ const postPolicyDetail = async (req, res) => {
       otherAddon: req.body.otherAddon || undefined,
       terrirism,
       netPremium,
-      gst,
+      gst: resolvedMasters.gst || req.body.gst || undefined,
       gstAmount,
       totalAmount,
       siteLocation,
@@ -683,7 +712,7 @@ const postPolicyDetail = async (req, res) => {
       endorsementTerrorism,
       endorsementOtherTerrorism,
       endorsementNetPremium,
-      endorsementGst: req.body.endorsementGst || undefined,
+      endorsementGst: resolvedMasters.endorsementGst || req.body.endorsementGst || undefined,
       endorsementGstAmount,
       paymentMode,
       etotalAmount,
@@ -919,6 +948,11 @@ const updatePolicyDetail = async (req, res) => {
         });
       }
     }
+
+      updateFields.tpGst = resolvedMasters.tpGst || updateFields.tpGst;
+      updateFields.odGst = resolvedMasters.odGst || updateFields.odGst;
+      updateFields.gst = resolvedMasters.gst || updateFields.gst;
+      updateFields.endorsementGst = resolvedMasters.endorsementGst || updateFields.endorsementGst;
 
     const updatedPolicyDetail = await policyDetailModel.findByIdAndUpdate(
       policyId,
