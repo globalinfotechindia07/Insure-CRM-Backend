@@ -1,5 +1,7 @@
 async function main() {
-  const url = 'https://insure-crm-backend-1-n420.onrender.com/api/insCompany?companyId=68ca95091d6a9cc2b96ae263';
+  // const url = 'https://insure-crm-backend-1-n420.onrender.com/api/insCompany?companyId=68ca95091d6a9cc2b96ae263';
+    const url = 'https://api.jpinsurancebrokers.co.in/api/insCompany?companyId=68ca95091d6a9cc2b96ae263';
+
   try {
     const res = await fetch(url, {
       method: 'POST',
