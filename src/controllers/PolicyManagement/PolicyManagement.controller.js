@@ -499,10 +499,6 @@ const postPolicyDetail = async (req, res) => {
       otherAddon,
       terrirism,
       netPremium,
-      CGST,
-      SGST,
-      IGST,
-      UGST,
       gst,
       gstAmount,
       totalAmount,
@@ -652,10 +648,6 @@ const postPolicyDetail = async (req, res) => {
       otherAddon: req.body.otherAddon || undefined,
       terrirism,
       netPremium,
-      CGST,
-      SGST,
-      IGST,
-      UGST,
       gst,
       gstAmount,
       totalAmount,
@@ -1912,10 +1904,7 @@ const importCsv = async (req, res) => {
       const endorsementGstAmount = Number(getValueByPossibleKeys(row, "ENDORSEMENT GST AMOUNT", "ENDORSEMENT GST")) || undefined;
 
       // Payment & Taxes
-      const CGST = String(getValueByPossibleKeys(row, "CGST") || "").trim();
-      const SGST = String(getValueByPossibleKeys(row, "SGST") || "").trim();
-      const IGST = String(getValueByPossibleKeys(row, "IGST") || "").trim();
-      const UGST = String(getValueByPossibleKeys(row, "UGST") || "").trim();
+
       const etotalAmount = Number(getValueByPossibleKeys(row, "E TOTAL AMOUNT", "E-TOTAL AMOUNT")) || undefined;
       const paidAmountVal = Number(getValueByPossibleKeys(row, "PAID AMOUNT", "AMOUNT PAID"));
       const paidAmount = !isNaN(paidAmountVal) && paidAmountVal > 0 ? paidAmountVal : totalAmount;
@@ -2071,10 +2060,7 @@ const importCsv = async (req, res) => {
         otherAddon: otherAddonId,
         terrirism: getValueByPossibleKeys(row, "Terrorism"),
         netPremium,
-        CGST: getValueByPossibleKeys(row, "CGST"),
-        SGST: getValueByPossibleKeys(row, "SGST"),
-        IGST: getValueByPossibleKeys(row, "IGST"),
-        UGST: getValueByPossibleKeys(row, "UGST"),
+
         gst: gstId,
         gstAmount,
         totalAmount,
@@ -2135,10 +2121,7 @@ const importCsv = async (req, res) => {
         chequeNo,
         posMisRef,
         bqpCode,
-        CGST,
-        SGST,
-        IGST,
-        UGST,
+
         tpBrokerageRate: tpBrokerageRateId,
         odBrokerageRate: odBrokerageRateId,
         rateOnTerr: rateOnTerrId,
