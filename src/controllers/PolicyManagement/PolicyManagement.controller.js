@@ -72,7 +72,11 @@ const getPolicyDetailByFY = async (req, res) => {
     const policyDetail = await policyDetailModel
       .find(query)
       .populate("insDepartment")
-      .populate("insCompany");
+      .populate("insCompany")
+      .populate("gst")
+      .populate("tpGst")
+      .populate("odGst")
+      .populate("endorsementGst");
     // .populate("ProductOrServiceCategory");
 
     // .populate("financialYear");
@@ -117,6 +121,10 @@ const getPolicyDetail = async (req, res) => {
       .populate("insCompany")
       .populate("retailCustomer")
       .populate("customerGroup")
+      .populate("gst")
+      .populate("tpGst")
+      .populate("odGst")
+      .populate("endorsementGst")
       .sort({ createdAt: -1 });
 
     if (!policyDetail || policyDetail.length === 0) {
