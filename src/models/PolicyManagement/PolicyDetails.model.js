@@ -222,7 +222,18 @@ const policyDetailSchema = new mongoose.Schema(
       type: Number,
       set: parseNumber,
     },
-
+    CGST: {
+      type: String,
+    },
+    SGST: {
+      type: String,
+    },
+    IGST: {
+      type: String,
+    },
+    UGST: {
+      type: String,
+    },
     totalAmount: {
       type: Number,
       set: parseNumber,

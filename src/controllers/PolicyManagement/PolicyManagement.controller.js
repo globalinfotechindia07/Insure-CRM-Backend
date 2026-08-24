@@ -72,11 +72,7 @@ const getPolicyDetailByFY = async (req, res) => {
     const policyDetail = await policyDetailModel
       .find(query)
       .populate("insDepartment")
-      .populate("insCompany")
-      .populate("gst")
-      .populate("tpGst")
-      .populate("odGst")
-      .populate("endorsementGst");
+      .populate("insCompany");
     // .populate("ProductOrServiceCategory");
 
     // .populate("financialYear");
@@ -121,10 +117,6 @@ const getPolicyDetail = async (req, res) => {
       .populate("insCompany")
       .populate("retailCustomer")
       .populate("customerGroup")
-      .populate("gst")
-      .populate("tpGst")
-      .populate("odGst")
-      .populate("endorsementGst")
       .sort({ createdAt: -1 });
 
     if (!policyDetail || policyDetail.length === 0) {
@@ -447,35 +439,6 @@ const ensureMastersExist = async (body, companyId) => {
   if (body.rateOnTerr) resolved.rateOnTerr = await resolveSingleBrokerageRate(body.rateOnTerr);
   if (body.rateOnOtherTerr) resolved.rateOnOtherTerr = await resolveSingleBrokerageRate(body.rateOnOtherTerr);
 
-  const resolveSingleGstRate = async (rateVal) => {
-    if (!rateVal) return undefined;
-    if (mongoose.Types.ObjectId.isValid(rateVal)) return rateVal;
-    let num = NaN;
-    if (typeof rateVal === "number") {
-      num = rateVal;
-    } else {
-      const cleanStr = String(rateVal).replace(/%/g, "").trim();
-      const parsed = Number(cleanStr);
-      if (!isNaN(parsed)) num = parsed;
-    }
-    if (isNaN(num)) return undefined;
-    try {
-      let doc = await GstPercentageModel.findOne({ value: String(num) });
-      if (!doc) {
-        doc = await GstPercentageModel.create({ value: String(num) });
-      }
-      return doc._id;
-    } catch (gstErr) {
-      console.error("Error resolving GST rate in ensureMastersExist:", gstErr);
-      return undefined;
-    }
-  };
-
-  if (body.gst) resolved.gst = await resolveSingleGstRate(body.gst);
-  if (body.tpGst) resolved.tpGst = await resolveSingleGstRate(body.tpGst);
-  if (body.odGst) resolved.odGst = await resolveSingleGstRate(body.odGst);
-  if (body.endorsementGst) resolved.endorsementGst = await resolveSingleGstRate(body.endorsementGst);
-
   return resolved;
 };
 
@@ -536,6 +499,10 @@ const postPolicyDetail = async (req, res) => {
       otherAddon,
       terrirism,
       netPremium,
+      CGST,
+      SGST,
+      IGST,
+      UGST,
       gst,
       gstAmount,
       totalAmount,
@@ -661,14 +628,14 @@ const postPolicyDetail = async (req, res) => {
       tpStartDate,
       tpEndDate,
       tpPremium,
-      tpGst: resolvedMasters.tpGst || req.body.tpGst || undefined,
+      tpGst,
       tpGstAmount,
       tpAmount,
       odPolicyDuration,
       odStartDate,
       odEndDate,
       odPremium,
-      odGst: resolvedMasters.odGst || req.body.odGst || undefined,
+      odGst,
       odGstAmount,
       odAmount,
       policyNumber,
@@ -685,7 +652,11 @@ const postPolicyDetail = async (req, res) => {
       otherAddon: req.body.otherAddon || undefined,
       terrirism,
       netPremium,
-      gst: resolvedMasters.gst || req.body.gst || undefined,
+      CGST,
+      SGST,
+      IGST,
+      UGST,
+      gst,
       gstAmount,
       totalAmount,
       siteLocation,
@@ -712,7 +683,7 @@ const postPolicyDetail = async (req, res) => {
       endorsementTerrorism,
       endorsementOtherTerrorism,
       endorsementNetPremium,
-      endorsementGst: resolvedMasters.endorsementGst || req.body.endorsementGst || undefined,
+      endorsementGst: req.body.endorsementGst || undefined,
       endorsementGstAmount,
       paymentMode,
       etotalAmount,
@@ -948,11 +919,6 @@ const updatePolicyDetail = async (req, res) => {
         });
       }
     }
-
-      updateFields.tpGst = resolvedMasters.tpGst || updateFields.tpGst;
-      updateFields.odGst = resolvedMasters.odGst || updateFields.odGst;
-      updateFields.gst = resolvedMasters.gst || updateFields.gst;
-      updateFields.endorsementGst = resolvedMasters.endorsementGst || updateFields.endorsementGst;
 
     const updatedPolicyDetail = await policyDetailModel.findByIdAndUpdate(
       policyId,
@@ -1946,7 +1912,10 @@ const importCsv = async (req, res) => {
       const endorsementGstAmount = Number(getValueByPossibleKeys(row, "ENDORSEMENT GST AMOUNT", "ENDORSEMENT GST")) || undefined;
 
       // Payment & Taxes
-
+      const CGST = String(getValueByPossibleKeys(row, "CGST") || "").trim();
+      const SGST = String(getValueByPossibleKeys(row, "SGST") || "").trim();
+      const IGST = String(getValueByPossibleKeys(row, "IGST") || "").trim();
+      const UGST = String(getValueByPossibleKeys(row, "UGST") || "").trim();
       const etotalAmount = Number(getValueByPossibleKeys(row, "E TOTAL AMOUNT", "E-TOTAL AMOUNT")) || undefined;
       const paidAmountVal = Number(getValueByPossibleKeys(row, "PAID AMOUNT", "AMOUNT PAID"));
       const paidAmount = !isNaN(paidAmountVal) && paidAmountVal > 0 ? paidAmountVal : totalAmount;
@@ -2102,7 +2071,10 @@ const importCsv = async (req, res) => {
         otherAddon: otherAddonId,
         terrirism: getValueByPossibleKeys(row, "Terrorism"),
         netPremium,
-
+        CGST: getValueByPossibleKeys(row, "CGST"),
+        SGST: getValueByPossibleKeys(row, "SGST"),
+        IGST: getValueByPossibleKeys(row, "IGST"),
+        UGST: getValueByPossibleKeys(row, "UGST"),
         gst: gstId,
         gstAmount,
         totalAmount,
@@ -2163,7 +2135,10 @@ const importCsv = async (req, res) => {
         chequeNo,
         posMisRef,
         bqpCode,
-
+        CGST,
+        SGST,
+        IGST,
+        UGST,
         tpBrokerageRate: tpBrokerageRateId,
         odBrokerageRate: odBrokerageRateId,
         rateOnTerr: rateOnTerrId,
