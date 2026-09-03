@@ -70,14 +70,60 @@ exports.createReminder = async (req, res) => {
 // ================= GET ALL REMINDERS =================
 exports.getAllReminders = async (req, res) => {
   try {
-    const reminders = await RenewalReminder.find()
+    const { page, limit, search, fromDate, toDate } = req.query;
+    
+    const query = {};
+    
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { customerName: searchRegex },
+        { policyNo: searchRegex },
+        { contactNo: searchRegex },
+        { email: searchRegex }
+      ];
+    }
+    
+    if (fromDate && toDate) {
+      const fDate = new Date(fromDate);
+      fDate.setHours(0, 0, 0, 0);
+      const tDate = new Date(toDate);
+      tDate.setHours(23, 59, 59, 999);
+      query.reminderDate = { $gte: fDate, $lte: tDate };
+    }
+    
+    const isPaginated = page !== undefined;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    const skipNum = (pageNum - 1) * limitNum;
+    
+    let reminders = [];
+    let totalCount = 0;
+    
+    const baseQuery = RenewalReminder.find(query)
       .populate("policyId", "policyNumber cutomerName netPremium totalAmount endDate vehicleNumber insDepartment")
-      .sort({ reminderDate: 1 });
+      .sort({ reminderDate: -1 });
+      
+    if (isPaginated) {
+      [totalCount, reminders] = await Promise.all([
+        RenewalReminder.countDocuments(query),
+        baseQuery.skip(skipNum).limit(limitNum)
+      ]);
+    } else {
+      reminders = await baseQuery;
+      totalCount = reminders.length;
+    }
 
     res.status(200).json({
       success: true,
-      count: reminders.length,
+      count: totalCount,
       data: reminders,
+      pagination: isPaginated ? {
+        totalItems: totalCount,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        pageSize: limitNum
+      } : null
     });
   } catch (error) {
     res.status(500).json({
