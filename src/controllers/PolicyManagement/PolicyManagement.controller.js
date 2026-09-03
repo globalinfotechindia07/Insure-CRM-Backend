@@ -72,7 +72,11 @@ const getPolicyDetailByFY = async (req, res) => {
     const policyDetail = await policyDetailModel
       .find(query)
       .populate("insDepartment")
-      .populate("insCompany");
+      .populate("insCompany")
+      .populate("gst")
+      .populate("tpGst")
+      .populate("odGst")
+      .populate("endorsementGst");
     // .populate("ProductOrServiceCategory");
 
     // .populate("financialYear");
@@ -97,7 +101,20 @@ const getPolicyDetailByFY = async (req, res) => {
 // get policy details
 const getPolicyDetail = async (req, res) => {
   try {
-    const { policyNumber, companyId } = req.query;
+    const { 
+      policyNumber, 
+      companyId,
+      page,
+      limit,
+      search,
+      financialYear,
+      company,
+      department,
+      month,
+      expireWithin60Days,
+      fromDate,
+      toDate
+    } = req.query;
 
     const query = {};
     if (companyId && mongoose.Types.ObjectId.isValid(companyId) && companyId !== "68c07ddaeb160d097128c5af") {
@@ -111,19 +128,147 @@ const getPolicyDetail = async (req, res) => {
       query.policyNumber = policyNumber;
     }
 
-    const policyDetail = await policyDetailModel
-      .find(query)
+    if (financialYear && mongoose.Types.ObjectId.isValid(financialYear)) {
+      query.financialYear = new mongoose.Types.ObjectId(financialYear);
+    }
+    if (company && mongoose.Types.ObjectId.isValid(company)) {
+      query.insCompany = new mongoose.Types.ObjectId(company);
+    }
+    if (department && mongoose.Types.ObjectId.isValid(department)) {
+      query.insDepartment = new mongoose.Types.ObjectId(department);
+    }
+
+    if (expireWithin60Days === 'true') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const next60Days = new Date(today);
+      next60Days.setDate(today.getDate() + 60);
+      next60Days.setHours(23, 59, 59, 999);
+      
+      const dateOr = [
+        { endDate: { $gte: today, $lte: next60Days } },
+        { renewalDate: { $gte: today, $lte: next60Days } },
+        { odEndDate: { $gte: today, $lte: next60Days } },
+        { tpEndDate: { $gte: today, $lte: next60Days } }
+      ];
+      
+      if (query.$or) {
+        if (!query.$and) query.$and = [{ $or: query.$or }];
+        query.$and.push({ $or: dateOr });
+        delete query.$or;
+      } else if (query.$and) {
+        query.$and.push({ $or: dateOr });
+      } else {
+        query.$or = dateOr;
+      }
+    } else if (fromDate && toDate) {
+      const fDate = new Date(fromDate);
+      fDate.setHours(0, 0, 0, 0);
+      const tDate = new Date(toDate);
+      tDate.setHours(23, 59, 59, 999);
+      
+      const dateOr = [
+        { endDate: { $gte: fDate, $lte: tDate } },
+        { renewalDate: { $gte: fDate, $lte: tDate } },
+        { odEndDate: { $gte: fDate, $lte: tDate } },
+        { tpEndDate: { $gte: fDate, $lte: tDate } }
+      ];
+      
+      if (query.$or) {
+        if (!query.$and) query.$and = [{ $or: query.$or }];
+        query.$and.push({ $or: dateOr });
+        delete query.$or;
+      } else if (query.$and) {
+        query.$and.push({ $or: dateOr });
+      } else {
+        query.$or = dateOr;
+      }
+    }
+
+    if (month) {
+      const [yearStr, monthStr] = month.split("-");
+      if (yearStr && monthStr) {
+        const startDate = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+        const endDate = new Date(parseInt(yearStr), parseInt(monthStr), 1);
+        
+        const monthOr = [
+          { startDate: { $gte: startDate, $lt: endDate } },
+          { tpStartDate: { $gte: startDate, $lt: endDate } },
+          { odStartDate: { $gte: startDate, $lt: endDate } },
+          { endorStartDate: { $gte: startDate, $lt: endDate } },
+          { transactionDate: { $gte: startDate, $lt: endDate } }
+        ];
+
+        if (query.$or) {
+          query.$and = [{ $or: query.$or }, { $or: monthOr }];
+          delete query.$or;
+        } else {
+          query.$or = monthOr;
+        }
+      }
+    }
+
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      
+      const [matchingCompanies, matchingDepts, matchingRetail, matchingGroups] = await Promise.all([
+        insCompanyModel.find({ $or: [{ insCompany: searchRegex }, { name: searchRegex }, { companyName: searchRegex }] }).select('_id'),
+        insDepartmentModel.find({ insDepartment: searchRegex }).select('_id'),
+        CustomerRegistrationModel.find({ name: searchRegex }).select('_id'),
+        customerGroupModel.find({ customerGroupName: searchRegex }).select('_id')
+      ]);
+
+      const searchOr = [
+        { policyNumber: searchRegex },
+        { cutomerName: searchRegex },
+        { insurerName: searchRegex }
+      ];
+
+      if (matchingCompanies.length > 0) searchOr.push({ insCompany: { $in: matchingCompanies.map(c => c._id) } });
+      if (matchingDepts.length > 0) searchOr.push({ insDepartment: { $in: matchingDepts.map(d => d._id) } });
+      if (matchingRetail.length > 0) searchOr.push({ retailCustomer: { $in: matchingRetail.map(r => r._id) } });
+      if (matchingGroups.length > 0) searchOr.push({ customerGroup: { $in: matchingGroups.map(g => g._id) } });
+
+      if (query.$or) {
+        if (!query.$and) query.$and = [{ $or: query.$or }];
+        query.$and.push({ $or: searchOr });
+        delete query.$or;
+      } else if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
+    }
+
+    const isPaginated = page !== undefined;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    const skipNum = (pageNum - 1) * limitNum;
+
+    let policyDetail = [];
+    let totalCount = 0;
+
+    const baseQuery = policyDetailModel.find(query)
       .populate("insDepartment")
       .populate("insCompany")
       .populate("retailCustomer")
       .populate("customerGroup")
+      .populate("gst")
+      .populate("tpGst")
+      .populate("odGst")
+      .populate("endorsementGst")
       .sort({ createdAt: -1 });
 
-    if (!policyDetail || policyDetail.length === 0) {
-      return res.status(200).json({ status: "true", data: [] });
+    if (isPaginated) {
+      [totalCount, policyDetail] = await Promise.all([
+        policyDetailModel.countDocuments(query),
+        baseQuery.skip(skipNum).limit(limitNum)
+      ]);
+    } else {
+      policyDetail = await baseQuery;
+      totalCount = policyDetail.length;
     }
 
-    // Deduplicate policy details strictly by _id so no distinct document is hidden
     const seenIds = new Set();
     const uniquePolicies = [];
 
@@ -141,7 +286,16 @@ const getPolicyDetail = async (req, res) => {
       uniquePolicies.push(polObj);
     }
 
-    return res.status(200).json({ status: "true", data: uniquePolicies });
+    return res.status(200).json({ 
+      status: "true", 
+      data: uniquePolicies,
+      pagination: isPaginated ? {
+        totalItems: totalCount,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        pageSize: limitNum
+      } : null
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
