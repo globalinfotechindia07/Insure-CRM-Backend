@@ -2063,7 +2063,7 @@ const importCsv = async (req, res) => {
       const endorsementTerrorism = String(getValueByPossibleKeys(row, "ENDORSEMENT TERRORISM") || "").trim();
       const endorsementOtherTerrorism = String(getValueByPossibleKeys(row, "ENDORSEMENT OTHER TERRORISM") || "").trim();
       const endorsementNetPremium = Number(getValueByPossibleKeys(row, "ENDORSEMENT NET PREMIUM")) || undefined;
-      const endorsementGstAmount = Number(getValueByPossibleKeys(row, "ENDORSEMENT GST AMOUNT", "ENDORSEMENT GST")) || undefined;
+      const endorsementGstAmount = Number(getValueByPossibleKeys(row, "ENDORSEMENT GST AMOUNT")) || undefined;
 
       // Payment & Taxes
       const CGST = String(getValueByPossibleKeys(row, "CGST") || "").trim();
@@ -2403,6 +2403,7 @@ const exportCsv = async (req, res) => {
         gst: obj.gst?.value || "",
         tpGst: obj.tpGst?.value || "",
         odGst: obj.odGst?.value || "",
+        endorsementGst: obj.endorsementGst?.value || "",
         rateOnTerr: obj.rateOnTerr?.brokerageRate || "",
         rateOnOtherTerr: obj.rateOnOtherTerr?.brokerageRate || "",
         tpBrokerageRate: obj.tpBrokerageRate?.brokerageRate || "",
@@ -2509,6 +2510,8 @@ const exportCsv = async (req, res) => {
         value: "endorsementOtherTerrorism",
       },
       { label: "Endorsement Net Premium", value: "endorsementNetPremium" },
+      { label: "Endorsement GST", value: "endorsementGst" },
+      { label: "Endorsement GST Amount", value: "endorsementGstAmount" },
 
       { label: "Payment Mode", value: "paymentMode" },
       { label: "E Total Amount", value: "etotalAmount" },
