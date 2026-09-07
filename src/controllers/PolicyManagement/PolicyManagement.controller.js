@@ -24,6 +24,8 @@ const {
 } = require("../../models/index");
 const ProductOrServiceCategorymodel = require("../../models/Masters/ProductOrServiceCategory/ProductOrServiceCategory.model");
 const RenewalReminder = require("../../models/renewalReminder.model");
+const POSModel = require("../../models/Masters/POSAndBQP/POS.model");
+const BQPModel = require("../../models/Masters/POSAndBQP/BQP.model");
 const axios = require("axios");
 const Customer = require("../../models/Customer");
 
@@ -1199,6 +1201,56 @@ const importCsv = async (req, res) => {
     const riskCodes = await riskCodeModel.find({});
     const paymentModes = await PaymentModeModel.find({});
     const brokerageRatesList = await brokerageRateModel.find({});
+    const posList = await POSModel.find({});
+    const bqpList = await BQPModel.find({});
+
+    const posCache = new Map();
+    posList.forEach(p => {
+      if(p.codeNumber) posCache.set(toLowerSafe(p.codeNumber), p);
+      if(p.posName) posCache.set(toLowerSafe(p.posName), p);
+    });
+    const resolvePOS = (rawCode, rawName) => {
+      const cleanCode = String(rawCode || "").trim();
+      const cleanName = String(rawName || "").trim();
+      if(!cleanCode && !cleanName) return { posCode: "", posName: "", posContact: "" };
+      
+      const lowerCode = toLowerSafe(cleanCode);
+      const lowerName = toLowerSafe(cleanName);
+      
+      if(lowerCode && posCache.has(lowerCode)) {
+         const p = posCache.get(lowerCode);
+         return { posCode: p.codeNumber, posName: p.posName, posContact: p.contactNumber };
+      }
+      if(lowerName && posCache.has(lowerName)) {
+         const p = posCache.get(lowerName);
+         return { posCode: p.codeNumber, posName: p.posName, posContact: p.contactNumber };
+      }
+      return { posCode: cleanCode, posName: cleanName, posContact: "" };
+    };
+
+    const bqpCache = new Map();
+    bqpList.forEach(b => {
+      if(b.codeNumber) bqpCache.set(toLowerSafe(b.codeNumber), b);
+      if(b.bqpName) bqpCache.set(toLowerSafe(b.bqpName), b);
+    });
+    const resolveBQP = (rawCode, rawName) => {
+      const cleanCode = String(rawCode || "").trim();
+      const cleanName = String(rawName || "").trim();
+      if(!cleanCode && !cleanName) return { bqpCode: "", bqpName: "", bqpContact: "" };
+      
+      const lowerCode = toLowerSafe(cleanCode);
+      const lowerName = toLowerSafe(cleanName);
+      
+      if(lowerCode && bqpCache.has(lowerCode)) {
+         const b = bqpCache.get(lowerCode);
+         return { bqpCode: b.codeNumber, bqpName: b.bqpName, bqpContact: b.contactNumber };
+      }
+      if(lowerName && bqpCache.has(lowerName)) {
+         const b = bqpCache.get(lowerName);
+         return { bqpCode: b.codeNumber, bqpName: b.bqpName, bqpContact: b.contactNumber };
+      }
+      return { bqpCode: cleanCode, bqpName: cleanName, bqpContact: "" };
+    };
 
     const resolveBrokerageRate = async (rawVal) => {
       if (rawVal === undefined || rawVal === null || rawVal === "") return undefined;
@@ -2072,7 +2124,20 @@ const importCsv = async (req, res) => {
       const paidAmount = !isNaN(paidAmountVal) && paidAmountVal > 0 ? paidAmountVal : totalAmount;
       const chequeNo = String(getValueByPossibleKeys(row, "CHEQUE NO", "CHEQUE NUMBER", "TRANSACTION NO", "REF NO") || "").trim();
       const posMisRef = String(getValueByPossibleKeys(row, "POS MIS REF", "POS MIS REFERENCE", "MIS REF") || "").trim();
-      const bqpCode = String(getValueByPossibleKeys(row, "BQP CODE", "BQP") || "").trim();
+
+      const rawPosCode = getValueByPossibleKeys(row, "POS CODE", "POS");
+      const rawPosName = getValueByPossibleKeys(row, "POS NAME", "POS_NAME");
+      const resolvedPos = resolvePOS(rawPosCode, rawPosName);
+      const posCode = resolvedPos.posCode;
+      const posName = resolvedPos.posName;
+      const posContact = String(getValueByPossibleKeys(row, "POS CONTACT", "POS_CONTACT") || resolvedPos.posContact || "").trim();
+
+      const rawBqpCode = getValueByPossibleKeys(row, "BQP CODE", "BQP");
+      const rawBqpName = getValueByPossibleKeys(row, "BQP NAME", "BQP_NAME");
+      const resolvedBqp = resolveBQP(rawBqpCode, rawBqpName);
+      const bqpCode = resolvedBqp.bqpCode;
+      const bqpName = resolvedBqp.bqpName;
+      const bqpContact = String(getValueByPossibleKeys(row, "BQP CONTACT", "BQP_CONTACT") || resolvedBqp.bqpContact || "").trim();
 
       const rawPayMode = getValueByPossibleKeys(row, "PAYMENT MODE", "PAYMENT TYPE", "MODE OF PAYMENT", "PAYMENT METHOD", "PAY MODE", "PAYMENT");
       const paymentMode = await resolvePaymentMode(rawPayMode);
@@ -2285,7 +2350,12 @@ const importCsv = async (req, res) => {
         etotalAmount,
         chequeNo,
         posMisRef,
+        posCode,
+        posName,
+        posContact,
         bqpCode,
+        bqpName,
+        bqpContact,
         CGST,
         SGST,
         IGST,
@@ -2516,7 +2586,12 @@ const exportCsv = async (req, res) => {
       { label: "Cheque No", value: "chequeNo" },
       { label: "Transaction Date", value: "transactionDate" },
       { label: "POS MIS Ref", value: "posMisRef" },
+      { label: "POS Code", value: "posCode" },
+      { label: "POS Name", value: "posName" },
+      { label: "POS Contact", value: "posContact" },
       { label: "BQP Code", value: "bqpCode" },
+      { label: "BQP Name", value: "bqpName" },
+      { label: "BQP Contact", value: "bqpContact" },
 
       { label: "Rate On Other Terrorism", value: "rateOnOtherTerr" },
       { label: "Amount On Other Terrorism", value: "amountOnOtherTerr" },

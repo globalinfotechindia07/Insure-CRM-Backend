@@ -353,9 +353,6 @@ const policyDetailSchema = new mongoose.Schema(
     posMisRef: {
       type: String,
     },
-    bqpCode: {
-      type: String,
-    },
     rateOnOtherTerr: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "brokerageRate",
@@ -411,6 +408,37 @@ const policyDetailSchema = new mongoose.Schema(
     coBrokerageAmount: {
       type: Number,
       set: parseNumber,
+    },
+    brokerName: {
+      type: String,
+      default: "",
+    },
+    posCode: {
+      type: String,
+      default: "",
+    },
+    posName: {
+      type: String,
+      default: "",
+    },
+    posContact: {
+      type: String,
+      default: "",
+    },
+    bqpCode: {
+      type: String,
+      default: "",
+    },
+    bqpName: {
+      type: String,
+      default: "",
+    },
+    bqpContact: {
+      type: String,
+      default: "",
+    },
+    branchBroker: {
+      type: mongoose.Schema.Types.ObjectId,
     },
     messageCount: {
       type: Number,
