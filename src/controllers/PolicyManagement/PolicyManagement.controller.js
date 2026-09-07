@@ -240,7 +240,6 @@ const getPolicyDetail = async (req, res) => {
       }
     }
 
-    const isPaginated = page !== undefined;
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
     const skipNum = (pageNum - 1) * limitNum;
@@ -257,17 +256,13 @@ const getPolicyDetail = async (req, res) => {
       .populate("tpGst")
       .populate("odGst")
       .populate("endorsementGst")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    if (isPaginated) {
-      [totalCount, policyDetail] = await Promise.all([
-        policyDetailModel.countDocuments(query),
-        baseQuery.skip(skipNum).limit(limitNum)
-      ]);
-    } else {
-      policyDetail = await baseQuery;
-      totalCount = policyDetail.length;
-    }
+    [totalCount, policyDetail] = await Promise.all([
+      policyDetailModel.countDocuments(query),
+      baseQuery.skip(skipNum).limit(limitNum)
+    ]);
 
     const seenIds = new Set();
     const uniquePolicies = [];
@@ -277,7 +272,7 @@ const getPolicyDetail = async (req, res) => {
       if (seenIds.has(idStr)) continue;
       seenIds.add(idStr);
 
-      const polObj = policy.toJSON ? JSON.parse(JSON.stringify(policy)) : JSON.parse(JSON.stringify(policy));
+      const polObj = policy;
       const effectiveEndDate = polObj.endDate || polObj.renewalDate || polObj.odEndDate || polObj.tpEndDate;
       if (effectiveEndDate) {
         if (!polObj.renewalDate) polObj.renewalDate = effectiveEndDate;
@@ -289,12 +284,12 @@ const getPolicyDetail = async (req, res) => {
     return res.status(200).json({ 
       status: "true", 
       data: uniquePolicies,
-      pagination: isPaginated ? {
+      pagination: {
         totalItems: totalCount,
         currentPage: pageNum,
         totalPages: Math.ceil(totalCount / limitNum),
         pageSize: limitNum
-      } : null
+      }
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -906,100 +901,102 @@ const getPolicyDetailById = async (req, res) => {
       .populate("odBrokerageRate")
       .populate("rateOnTerr")
       .populate("rateOnOtherTerr")
-      .populate("riskCode");
+      .populate("riskCode")
+      .lean();
     if (!policy) {
       return res
         .status(404)
         .json({ success: false, message: "Policy not found" });
     }
 
-    let policyObj = JSON.parse(JSON.stringify(policy));
+    let policyObj = policy;
     let modified = false;
+    let updateFields = {};
 
     // Self-repair if float serial date ended up in renewable field
-    if (policy.renewable && /^\d+(\.\d+)?$/.test(String(policy.renewable).trim()) && !policy.renewalDate) {
-      const serialDate = Number(String(policy.renewable).trim());
+    if (policyObj.renewable && /^\d+(\.\d+)?$/.test(String(policyObj.renewable).trim()) && !policyObj.renewalDate) {
+      const serialDate = Number(String(policyObj.renewable).trim());
       const parsedDate = new Date(Math.round((serialDate - 25569) * 86400 * 1000));
       if (!isNaN(parsedDate.getTime())) {
-        policy.renewalDate = parsedDate;
-        policy.endDate = parsedDate;
-        policy.renewable = "RENEWAL";
-
         policyObj.renewalDate = parsedDate;
         policyObj.endDate = parsedDate;
         policyObj.renewable = "RENEWAL";
+
+        updateFields.renewalDate = parsedDate;
+        updateFields.endDate = parsedDate;
+        updateFields.renewable = "RENEWAL";
         modified = true;
       }
     }
 
     // Reconstruct start and end dates if they are missing
-    if (!policy.endDate && policy.renewalDate) {
-      policy.endDate = policy.renewalDate;
-      policyObj.endDate = policy.renewalDate;
+    if (!policyObj.endDate && policyObj.renewalDate) {
+      policyObj.endDate = policyObj.renewalDate;
+      updateFields.endDate = policyObj.renewalDate;
       modified = true;
     }
-    if (!policy.startDate && policy.endDate) {
-      const computedStart = new Date(policy.endDate);
+    if (!policyObj.startDate && policyObj.endDate) {
+      const computedStart = new Date(policyObj.endDate);
       computedStart.setFullYear(computedStart.getFullYear() - 1);
       computedStart.setDate(computedStart.getDate() + 1);
-      policy.startDate = computedStart;
       policyObj.startDate = computedStart;
+      updateFields.startDate = computedStart;
       modified = true;
     }
-    if (!policy.tpStartDate && policy.startDate) {
-      policy.tpStartDate = policy.startDate;
-      policyObj.tpStartDate = policy.startDate;
+    if (!policyObj.tpStartDate && policyObj.startDate) {
+      policyObj.tpStartDate = policyObj.startDate;
+      updateFields.tpStartDate = policyObj.startDate;
       modified = true;
     }
-    if (!policy.odStartDate && policy.startDate) {
-      policy.odStartDate = policy.startDate;
-      policyObj.odStartDate = policy.startDate;
+    if (!policyObj.odStartDate && policyObj.startDate) {
+      policyObj.odStartDate = policyObj.startDate;
+      updateFields.odStartDate = policyObj.startDate;
       modified = true;
     }
-    if (!policy.tpEndDate && (policy.endDate || policy.renewalDate)) {
-      policy.tpEndDate = policy.endDate || policy.renewalDate;
-      policyObj.tpEndDate = policy.endDate || policy.renewalDate;
+    if (!policyObj.tpEndDate && (policyObj.endDate || policyObj.renewalDate)) {
+      policyObj.tpEndDate = policyObj.endDate || policyObj.renewalDate;
+      updateFields.tpEndDate = policyObj.endDate || policyObj.renewalDate;
       modified = true;
     }
-    if (!policy.odEndDate && (policy.endDate || policy.renewalDate)) {
-      policy.odEndDate = policy.endDate || policy.renewalDate;
-      policyObj.odEndDate = policy.endDate || policy.renewalDate;
+    if (!policyObj.odEndDate && (policyObj.endDate || policyObj.renewalDate)) {
+      policyObj.odEndDate = policyObj.endDate || policyObj.renewalDate;
+      updateFields.odEndDate = policyObj.endDate || policyObj.renewalDate;
       modified = true;
     }
     // Also fill renewalDate/endDate if they are empty but odEndDate/tpEndDate are present
-    const effectiveEnd = policy.odEndDate || policy.tpEndDate;
-    if (!policy.renewalDate && effectiveEnd) {
-      policy.renewalDate = effectiveEnd;
+    const effectiveEnd = policyObj.odEndDate || policyObj.tpEndDate;
+    if (!policyObj.renewalDate && effectiveEnd) {
       policyObj.renewalDate = effectiveEnd;
+      updateFields.renewalDate = effectiveEnd;
       modified = true;
     }
-    if (!policy.endDate && effectiveEnd) {
-      policy.endDate = effectiveEnd;
+    if (!policyObj.endDate && effectiveEnd) {
       policyObj.endDate = effectiveEnd;
+      updateFields.endDate = effectiveEnd;
       modified = true;
     }
 
     // Self-repair brokerage totals if missing
-    if (!policy.totalBrokerageGst) {
-      policy.totalBrokerageGst = 18;
+    if (!policyObj.totalBrokerageGst) {
       policyObj.totalBrokerageGst = 18;
+      updateFields.totalBrokerageGst = 18;
       modified = true;
     }
-    if ((!policy.totalBrokerageAmount || policy.totalBrokerageAmount === 0) && (policy.odBrokerageAmount || policy.tpBrokerageAmount)) {
-      const tot = (policy.odBrokerageAmount || 0) + (policy.tpBrokerageAmount || 0);
-      policy.totalBrokerageAmount = tot;
+    if ((!policyObj.totalBrokerageAmount || policyObj.totalBrokerageAmount === 0) && (policyObj.odBrokerageAmount || policyObj.tpBrokerageAmount)) {
+      const tot = (policyObj.odBrokerageAmount || 0) + (policyObj.tpBrokerageAmount || 0);
       policyObj.totalBrokerageAmount = tot;
+      updateFields.totalBrokerageAmount = tot;
       modified = true;
     }
-    if ((!policy.totalBrokerageAmountincGst || policy.totalBrokerageAmountincGst === 0) && policy.totalBrokerageAmount) {
-      const totInc = Math.round((policy.totalBrokerageAmount * (1 + ((policy.totalBrokerageGst || 18) / 100))) * 100) / 100;
-      policy.totalBrokerageAmountincGst = totInc;
+    if ((!policyObj.totalBrokerageAmountincGst || policyObj.totalBrokerageAmountincGst === 0) && policyObj.totalBrokerageAmount) {
+      const totInc = Math.round((policyObj.totalBrokerageAmount * (1 + ((policyObj.totalBrokerageGst || 18) / 100))) * 100) / 100;
       policyObj.totalBrokerageAmountincGst = totInc;
+      updateFields.totalBrokerageAmountincGst = totInc;
       modified = true;
     }
 
     if (modified) {
-      await policy.save();
+      await policyDetailModel.updateOne({ _id: id }, { $set: updateFields });
     }
 
     res.status(200).json({
