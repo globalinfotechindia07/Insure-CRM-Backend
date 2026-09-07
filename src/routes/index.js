@@ -241,6 +241,10 @@ const brokerNameRouter = require("./Masters/BrokerName/BrokerName.route");
 const branchBrokerRouter = require("./Masters/BranchBroker/BranchBroker.route");
 const incotermsRouter = require("./Masters/Incoterms/Incoterms.route");
 const subCustomerGroupRouter = require("./Masters/SubCustomerGroup/SubCustomerGroup.route");
+const posRouter = require("./Masters/POSAndBQP/POS.route");
+const bqpRouter = require("./Masters/POSAndBQP/BQP.route");
+const posPatternRouter = require("./Masters/POSAndBQP/POSPattern.route");
+const bqpPatternRouter = require("./Masters/POSAndBQP/BQPPattern.route");
 // Add this line with your other imports
 const paymentRoutes = require("./Payment/payment.route");
 const emailRoutes = require("./emailRoutes");
@@ -1037,6 +1041,22 @@ const defaultRoutes = [
     {
     path: "/company",
     route: companysRouter,
+  },
+  {
+    path: "/pos",
+    route: posRouter,
+  },
+  {
+    path: "/pos-pattern",
+    route: posPatternRouter,
+  },
+  {
+    path: "/bqp",
+    route: bqpRouter,
+  },
+  {
+    path: "/bqp-pattern",
+    route: bqpPatternRouter,
   },
 ];
 
