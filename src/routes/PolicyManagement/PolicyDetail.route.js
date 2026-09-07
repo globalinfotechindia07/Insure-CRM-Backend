@@ -2,6 +2,16 @@ const express = require("express");
 const policyDetailRouter = express.Router();
 const policyDetailControllers = require("../../controllers/PolicyManagement/PolicyManagement.controller.js");
 const fs = require("fs");
+const rateLimit = require("express-rate-limit");
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per `window` (here, per minute)
+  message: "Too many requests from this IP, please try again after a minute",
+});
+
+policyDetailRouter.use(apiLimiter);
+
 
 const { handleToken } = require("../../utils/handleToken");
 
