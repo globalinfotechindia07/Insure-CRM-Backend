@@ -24,7 +24,7 @@ const allowedOrigins = [
 
   "https://mirai.isyncerp.com",
   "https://insure.isyncerp.com",
-  "https://jpinsurancebroker.co.in",
+  "https://jpinsurancebrokers.co.in",
   "http://miraicrm.com",
 ];
 
