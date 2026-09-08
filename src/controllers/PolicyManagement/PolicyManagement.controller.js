@@ -267,12 +267,25 @@ const getPolicyDetail = async (req, res) => {
     const seenIds = new Set();
     const uniquePolicies = [];
 
+    const isObjectId = (val) => val && typeof val === 'object' && val.constructor && val.constructor.name === 'ObjectId';
+
     for (const policy of policyDetail) {
       const idStr = String(policy._id);
       if (seenIds.has(idStr)) continue;
       seenIds.add(idStr);
 
       const polObj = policy;
+      
+      const populatedFields = [
+        "insDepartment", "insCompany", "retailCustomer", "customerGroup",
+        "gst", "tpGst", "odGst", "endorsementGst"
+      ];
+      populatedFields.forEach(field => {
+        if (isObjectId(polObj[field])) {
+          polObj[field] = 0;
+        }
+      });
+
       const effectiveEndDate = polObj.endDate || polObj.renewalDate || polObj.odEndDate || polObj.tpEndDate;
       if (effectiveEndDate) {
         if (!polObj.renewalDate) polObj.renewalDate = effectiveEndDate;
@@ -912,6 +925,21 @@ const getPolicyDetailById = async (req, res) => {
     let policyObj = policy;
     let modified = false;
     let updateFields = {};
+
+    const isObjectId = (val) => val && typeof val === 'object' && val.constructor && val.constructor.name === 'ObjectId';
+    const populatedFieldsById = [
+      "insDepartment", "insCompany", "product", "subProduct", "retailCustomer", 
+      "customerGroup", "subCustomerGroup", "branchCode", "prefix", "brokerName", 
+      "branchBroker", "fuelType", "incoterms", "otherAddon", "endorsementReason", 
+      "financialYear", "gst", "tpGst", "odGst", "endorsementGst", "tpBrokerageRate", 
+      "odBrokerageRate", "rateOnTerr", "rateOnOtherTerr", "riskCode"
+    ];
+    populatedFieldsById.forEach(field => {
+      if (isObjectId(policyObj[field])) {
+        policyObj[field] = 0;
+      }
+    });
+
 
     // Self-repair if float serial date ended up in renewable field
     if (policyObj.renewable && /^\d+(\.\d+)?$/.test(String(policyObj.renewable).trim()) && !policyObj.renewalDate) {
