@@ -1,9 +1,19 @@
 const express = require("express");
 
-//todo: superAdmin
+// Superadmin & Admin
 const superAdminRouter = require("./superAdmin.route");
+const adminRoute = require("./admin.route");
 
-// todo New Master
+// Company & Department Setup
+const companySetupRoute = require("./companySetup.route");
+const departmentRoute = require("./departmentSetup.route");
+const departmentTypeRouter = require("./departmentType.route");
+const departmentSubTypeRouter = require("./departmentSubType.route");
+const departmentsRouter = require("../routes/departmentRoutes");
+const designationRoute = require("./Masters/designation.route");
+const notificationRouter = require("./Notification/Notification");
+
+// Masters - New
 const bankDetailsRouter = require("./Masters/Bank-Details/bankDetails.route");
 const productOrServiceCategoryRouter = require("./Masters/ProductOrServiceCategory/ProductOrServiceCategory.route");
 const SubProductCategoryRouter = require("./Masters/SubProductCategory/SubProductCategory.route");
@@ -11,6 +21,7 @@ const leaveTypeRouter = require("./Masters/LeaveType/leaveType.route");
 const leadReferenceRouter = require("./Masters/LeadReference/leadReference.route");
 const leadStatusRouter = require("./Masters/LeadStatus/leadStatus.route");
 const leadTypeRouter = require("./Masters/LeadType/leadType.route");
+const leadStageRouter = require("./Masters/LeadStage/leadStage.route");
 const CategoryOfOrganisationRouter = require("./Masters/CategoryOfOrganisation/CategoryOfOrganisation.route");
 const professionRouter = require("./Masters/Profession/Profession.route");
 const positionRouter = require("./Masters/Position/position.route");
@@ -23,95 +34,16 @@ const networkRouter = require("./Masters/Network/network.route");
 const statusRouter = require("./Masters/Status/status.route");
 const ticketStatusRouter = require("./Masters/TicketStatus/ticketStatus.route");
 const taskStatusRouter = require("./Masters/TaskStatus/taskStatus.route");
-const leadStageRouter = require("./Masters/LeadStage/leadStage.route");
 const priorityRouter = require("./Masters/Priority/priority.route");
-const taskmanagementrouter = require("./TaskManagement/taskmanagement.route");
-
-// todo: Client
-const clientRegistrationRouter = require("./Client/clientRegistration.route");
-const contactPersonRouter = require("./Client/contactPerson.route");
-
-//todo: Customer
-const customerRegistrationRouter = require("./Customer/customerRegistration.route");
-
-//todo Customer Group
-const customerGroupRouter = require("./CustomerGroup/CustomerGroup.route");
-const customerRoutes = require("./customerRoutes");
-//todo: type of client
-const typeOfClientRouter = require("./Client/typofClient.route");
-
-//todo: Prifix
 const prefixRouter = require("./Masters/Prefix/prefix.route");
-
-//todo: Contact
-const contactRouter = require("./Contacts/contacts.route");
-
-//todo: prospect
-const companyRouter = require("./Prospect/prospect.route");
-
-//todo: lead-management (lead)
-const leadRouter = require("./Lead-management/lead.route");
-
-//todo: gst percentage
 const gstPercentageRouter = require("./Masters/GstPercentage/gstPercentage.route");
-
-const holidayTypeRoute = require("./Masters/HolidayType/HolidayType.route");
-const holidayRoute = require("./Masters/Holiday/Holiday.route");
-
-// Old Masters
-const adminRoute = require("./admin.route");
-
-
-const designationRoute = require("./Masters/designation.route");
-const companySetupRoute = require("./companySetup.route");
-const departmentRoute = require("./departmentSetup.route");
-const notificationRouter = require("./Notification/Notification");
-
 const paymentModeRouter = require("./Masters/payment_mode.route");
 const employeeRoleRouter = require("./Masters/employee_role.route");
-
 const ledgerRouter = require("./Masters/ladger.route");
 const insuranceCompanyRouter = require("./Masters/insurance_company.route");
 const gipsaaCompanyRouter = require("./Masters/gipsaa_company.route");
-
-
-const departmentsRouter = require("../routes/departmentRoutes");
-
-
-//hr setup
-
-// OPD Patient Starts
-
-// OPD Patient Ends
 const categoryRoute = require("./Masters/category.route");
-
-//emergency
-const departmentTypeRouter = require("./departmentType.route");
-const departmentSubTypeRouter = require("./departmentSubType.route");
-
-
-
-// Add this line with your other imports (around line 200-250)
-const renewalReminderRouter = require("../routes/renewalReminder.routes");
-
-const companysRouter = require("../routes/companyRoutes");
-
-
 const TimeIntervalMasterRouter = require("./Masters/timeInterval.route");
-
-const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
-
-//invoice
-
-const InvoiceRouter = require("./Invoice/Invoice.route");
-const AdminclientRegistrationRouter = require("./Admin-client/adminClientRegistraion.route");
-
-//Policy Management
-const policyDetailRouter = require("./PolicyManagement/PolicyDetail.route");
-
-//ticket management
-
-const ticketManageRouter = require("./TicketManagement/ticketManagement.route");
 const fuelTypeRouter = require("./Masters/FuelType/FuelType.route");
 const vehicleTypeRouter = require("./Masters/VehicleType/VehicleType.route");
 const licenseValidityRouter = require("./Masters/LicenseValidity/LicenseValidity.route");
@@ -124,281 +56,89 @@ const brokerNameRouter = require("./Masters/BrokerName/BrokerName.route");
 const branchBrokerRouter = require("./Masters/BranchBroker/BranchBroker.route");
 const incotermsRouter = require("./Masters/Incoterms/Incoterms.route");
 const subCustomerGroupRouter = require("./Masters/SubCustomerGroup/SubCustomerGroup.route");
+const holidayTypeRoute = require("./Masters/HolidayType/HolidayType.route");
+const holidayRoute = require("./Masters/Holiday/Holiday.route");
 const posRouter = require("./Masters/POSAndBQP/POS.route");
 const bqpRouter = require("./Masters/POSAndBQP/BQP.route");
 const posPatternRouter = require("./Masters/POSAndBQP/POSPattern.route");
 const bqpPatternRouter = require("./Masters/POSAndBQP/BQPPattern.route");
-// Add this line with your other imports
-const emailRoutes = require("./emailRoutes");
+
+// Staffs
 const administrativeRouter = require("./Staffs/administrative/administrative.route");
 const employeeRoute = require("./Staffs/employee/employee.route");
 const support = require("./Staffs/support/support.route");
 const attendanceRouter = require("./Staffs/Attendance/attendance.routes");
+
+// Branch Settings
+const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
+
+// Client & Customer
+const clientRegistrationRouter = require("./Client/clientRegistration.route");
+const contactPersonRouter = require("./Client/contactPerson.route");
+const typeOfClientRouter = require("./Client/typofClient.route");
+const customerRegistrationRouter = require("./Customer/customerRegistration.route");
+const customerGroupRouter = require("./CustomerGroup/CustomerGroup.route");
+const customerRoutes = require("./customerRoutes");
+const contactRouter = require("./Contacts/contacts.route");
+const AdminclientRegistrationRouter = require("./Admin-client/adminClientRegistraion.route");
+
+// Prospect, Lead, Invoice
+const companyRouter = require("./Prospect/prospect.route");
+const leadRouter = require("./Lead-management/lead.route");
+const InvoiceRouter = require("./Invoice/Invoice.route");
+
+// Policy Management
+const policyDetailRouter = require("./PolicyManagement/PolicyDetail.route");
+
+// Ticket & Task Management
+const ticketManageRouter = require("./TicketManagement/ticketManagement.route");
+const taskmanagementrouter = require("./TaskManagement/taskmanagement.route");
+
+// Email, Surveyor, TPA, Investigator, Claim, Renewal
+const emailRoutes = require("./emailRoutes");
+const surveyorRouter = require("../routes/surveyor.routes");
+const tpaRouter = require("../routes/tpa.routes");
+const investigatorRouter = require("../routes/investigator.route");
+const claimRouter = require("../routes/claim.routes");
+const renewalReminderRouter = require("../routes/renewalReminder.routes");
+const companysRouter = require("../routes/companyRoutes");
+
 const router = express.Router();
 
-const surveyorRouter = require("../routes/surveyor.routes");
-
-const tpaRouter = require("../routes/tpa.routes");
-
-const investigatorRouter = require("../routes/investigator.route");
-
-const claimRouter = require("../routes/claim.routes");
-
-
-
 const defaultRoutes = [
-  
-  
-  
-  {
-    path: "/administrative",
-    route: administrativeRouter,
-  },
-  // superAdmin
-  {
-    path: "/superAdmin",
-    route: superAdminRouter,
-  },
+  // Admin & Setup
+  { path: "/superAdmin", route: superAdminRouter },
+  { path: "/admin", route: adminRoute },
+  { path: "/company-setup", route: companySetupRoute },
+  { path: "/department-setup", route: departmentRoute },
+  { path: "/department-type", route: departmentTypeRouter },
+  { path: "/department-sub-type", route: departmentSubTypeRouter },
+  { path: "/department", route: departmentRouter },
+  { path: "/designation-master", route: designationRoute },
+  { path: "/notification", route: notificationRouter },
 
-  {
-    path: "/admin",
-    route: adminRoute,
-  },
+  // Staff
+  { path: "/administrative", route: administrativeRouter },
+  { path: "/employee", route: employeeRoute },
+  { path: "/support", route: support },
+  { path: "/attendance", route: attendanceRouter },
+  { path: "/employee-role", route: employeeRoleRouter },
 
-  {
-    path: "/company-setup",
-    route: companySetupRoute,
-  },
-  {
-    path: "/department-setup",
-    route: departmentRoute,
-  },
-  {
-    path: "/department-type",
-    route: departmentTypeRouter,
-  },
-  {
-    path: "/department-sub-type",
-    route: departmentSubTypeRouter,
-  },
-  
-  {
-    path: "/designation-master",
-    route: designationRoute,
-  },
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-    {
-    path: "/department",
-    route: departmentsRouter,  // Using new department module
-  },
-
-  
-  
-  
-  
-  
-
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-  
-  
-  {
-    path: "/notification",
-    route: notificationRouter,
-  },
-  
-  {
-    path: "/payment-mode",
-    route: paymentModeRouter,
-  },
-  
-  
-  
-  
-  
-
-  
-  
-  
-  
-
-  
-  
-  
-
-  {
-    path: "/ledger",
-    route: ledgerRouter,
-  },
-  {
-    path: "/insurance-company",
-    route: insuranceCompanyRouter,
-  },
-  {
-    path: "/gipsaa-company",
-    route: gipsaaCompanyRouter,
-  },
-  
-  
-  
-  
-  // OPD/Patient Start
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-
-  
-
-  // OPD/Patient Ends
-  
-  
-
-  
-  {
-    path: "/category",
-    route: categoryRoute,
-  },
-  
-
-
-  
-
-  {
-    path: "/time-interval",
-    route: TimeIntervalMasterRouter,
-  },
-  
-  
-  
-
-  
-  
-
-  
-  
-  
-  
-  
-  
-  //todo: New Masters
-  {
-    path: "/bankDetails",
-    route: bankDetailsRouter,
-  },
-  {
-    path: "/productOrServiceCategory",
-    route: productOrServiceCategoryRouter,
-  },
-  {
-    path: "/SubProductCategory",
-    route: SubProductCategoryRouter,
-  },
-  {
-    path: "/leaveType",
-    route: leaveTypeRouter,
-  },
-  {
-    path: "/leadReference",
-    route: leadReferenceRouter,
-  },
-  {
-    path: "/leadStatus",
-    route: leadStatusRouter,
-  },
-  {
-    path: "/leadStage",
-    route: leadStageRouter,
-  },
-  {
-    path: "/leadType",
-    route: leadTypeRouter,
-  },
-  {
-    path: "/CategoryOfOrganisation",
-    route: CategoryOfOrganisationRouter,
-  },
-  {
-    path: "/profession",
-    route: professionRouter,
-  },
-  
-  {
-    path: "/position",
-    route: positionRouter,
-  },
-  {
-    path: "/branchSettings",
-    route: branchSettingsRouter,
-  },
-  {
-    path: "/insCompany",
-    route: insCompanyRouter,
-  },
-  {
-    path: "/insDepartment",
-    route: insDepartmentRouter,
-  },
+  // Masters
+  { path: "/bankDetails", route: bankDetailsRouter },
+  { path: "/productOrServiceCategory", route: productOrServiceCategoryRouter },
+  { path: "/SubProductCategory", route: SubProductCategoryRouter },
+  { path: "/leaveType", route: leaveTypeRouter },
+  { path: "/leadReference", route: leadReferenceRouter },
+  { path: "/leadStatus", route: leadStatusRouter },
+  { path: "/leadStage", route: leadStageRouter },
+  { path: "/leadType", route: leadTypeRouter },
+  { path: "/CategoryOfOrganisation", route: CategoryOfOrganisationRouter },
+  { path: "/profession", route: professionRouter },
+  { path: "/position", route: positionRouter },
+  { path: "/branchSettings", route: branchSettingsRouter },
+  { path: "/insCompany", route: insCompanyRouter },
+  { path: "/insDepartment", route: insDepartmentRouter },
   { path: "/brokerBranch", route: brokerBranchRouter },
   { path: "/brokerageRate", route: brokerageRateRouter },
   { path: "/fuelType", route: fuelTypeRouter },
@@ -409,166 +149,59 @@ const defaultRoutes = [
   { path: "/otherAddon", route: otherAddonRouter },
   { path: "/riskCode", route: riskCodeRouter },
   { path: "/financialYear", route: financialYearRouter },
-  { path: "/policyDetail", route: policyDetailRouter },
   { path: "/brokerName", route: brokerNameRouter },
   { path: "/branchBroker", route: branchBrokerRouter },
   { path: "/incoterms", route: incotermsRouter },
   { path: "/subCustomerGroup", route: subCustomerGroupRouter },
-  {
-    path: "/department",
-    route: departmentRouter,
-  },
-  {
-    path: "/network",
-    route: networkRouter,
-  },
-  {
-    path: "/status",
-    route: statusRouter,
-  },
-  {
-    path: "/ticketStatus",
-    route: ticketStatusRouter,
-  },
-  {
-    path: "/taskStatus",
-    route: taskStatusRouter,
-  },
-  {
-    path: "/priority",
-    route: priorityRouter,
-  },
+  { path: "/network", route: networkRouter },
+  { path: "/status", route: statusRouter },
+  { path: "/ticketStatus", route: ticketStatusRouter },
+  { path: "/taskStatus", route: taskStatusRouter },
+  { path: "/priority", route: priorityRouter },
+  { path: "/prefix", route: prefixRouter },
+  { path: "/payment-mode", route: paymentModeRouter },
+  { path: "/ledger", route: ledgerRouter },
+  { path: "/insurance-company", route: insuranceCompanyRouter },
+  { path: "/gipsaa-company", route: gipsaaCompanyRouter },
+  { path: "/category", route: categoryRoute },
+  { path: "/time-interval", route: TimeIntervalMasterRouter },
+  { path: "/holidayType", route: holidayTypeRoute },
+  { path: "/holiday", route: holidayRoute },
+  { path: "/policyDetail", route: policyDetailRouter },
+  { path: "/pos", route: posRouter },
+  { path: "/pos-pattern", route: posPatternRouter },
+  { path: "/bqp", route: bqpRouter },
+  { path: "/bqp-pattern", route: bqpPatternRouter },
 
-  //todo: Client
-  {
-    path: "/clientRegistration",
-    route: clientRegistrationRouter,
-  },
-  {
-    path: "/customerRegistration",
-    route: customerRegistrationRouter,
-  },
-  {
-    path: "/customerGroup",
-    route: customerGroupRouter,
-  },
-  {
-    path: "/contactPerson",
-    route: contactPersonRouter,
-  },
-  //todo: type of client
-  {
-    path: "/typeOfClient",
-    route: typeOfClientRouter,
-  },
+  // Client & Customer
+  { path: "/clientRegistration", route: clientRegistrationRouter },
+  { path: "/customerRegistration", route: customerRegistrationRouter },
+  { path: "/customerGroup", route: customerGroupRouter },
+  { path: "/contactPerson", route: contactPersonRouter },
+  { path: "/typeOfClient", route: typeOfClientRouter },
+  { path: "/admin-clientRegistration", route: AdminclientRegistrationRouter },
+  { path: "/prefix", route: prefixRouter },
+  { path: "/contact", route: contactRouter },
+  { path: "/customers", route: customerRoutes },
 
-  //todo: admin-client
-  {
-    path: "/admin-clientRegistration",
-    route: AdminclientRegistrationRouter,
-  },
-  
-  
+  // Prospect, Lead, Invoice, GST
+  { path: "/prospect", route: companyRouter },
+  { path: "/lead", route: leadRouter },
+  { path: "/gst-percentage", route: gstPercentageRouter },
+  { path: "/invoiceRegistration", route: InvoiceRouter },
 
-  //todo: prefix
-  {
-    path: "/prefix",
-    route: prefixRouter,
-  },
-  //todo: contacts
-  {
-    path: "/contact",
-    route: contactRouter,
-  },
-  //todo: prospect
-  {
-    path: "/prospect",
-    route: companyRouter,
-  },
-  //todo: lead
-  {
-    path: "/lead",
-    route: leadRouter,
-  },
-  //todo: gst percentage
-  {
-    path: "/gst-percentage",
-    route: gstPercentageRouter,
-  },
-  {
-    path: "/invoiceRegistration",
-    route: InvoiceRouter,
-  },
-  {
-    path: "/holidayType",
-    route: holidayTypeRoute,
-  },
-  {
-    path: "/holiday",
-    route: holidayRoute,
-  },
-  //ticket management
-  {
-    path: "/ticket-management",
-    route: ticketManageRouter,
-  },
-  {
-    path: "/task-manager",
-    route: taskmanagementrouter,
-  },
-  
-{
-  path: "/email",
-  route: emailRoutes,
-},
-{
-  path: "/customers",
-  route: customerRoutes,
-},
-{
-  path: "/surveyor",
-  route: surveyorRouter,
-},
+  // Ticket & Task
+  { path: "/ticket-management", route: ticketManageRouter },
+  { path: "/task-manager", route: taskmanagementrouter },
 
-{
-  path: "/tpa",
-  route: tpaRouter,
-},
-
-{
-  path: "/investigator",
-  route: investigatorRouter,
-},
-
-{
-  path: "/claim",
-  route: claimRouter,
-},
-
-  {
-    path: "/renewal-reminder",
-    route: renewalReminderRouter,
-  },
-    {
-    path: "/company",
-    route: companysRouter,
-  },
-  {
-    path: "/pos",
-    route: posRouter,
-  },
-  {
-    path: "/pos-pattern",
-    route: posPatternRouter,
-  },
-  {
-    path: "/bqp",
-    route: bqpRouter,
-  },
-  {
-    path: "/bqp-pattern",
-    route: bqpPatternRouter,
-  },
+  // Email, CRM Core
+  { path: "/email", route: emailRoutes },
+  { path: "/surveyor", route: surveyorRouter },
+  { path: "/tpa", route: tpaRouter },
+  { path: "/investigator", route: investigatorRouter },
+  { path: "/claim", route: claimRouter },
+  { path: "/renewal-reminder", route: renewalReminderRouter },
+  { path: "/company", route: companysRouter },
 ];
 
 defaultRoutes.forEach((route) => {

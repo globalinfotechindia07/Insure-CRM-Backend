@@ -61,8 +61,6 @@ module.exports.typeOfClientController = require("./Client/TypeOfClient.controlle
 
 // todo: Admin-Client
 module.exports.AdminClientRegistration = require("./Admin-Client/adminClientRegistration.controller");
-module.exports.AdminContactPersonController = require("./Admin-Client/adminContactPerson.controller");
-module.exports.AdminTypeOfClientController = require("./Admin-Client/adminTypeOfClient.controller");
 
 //todo: contacts
 module.exports.contactsController = require("./Contacts/contact.controller");
@@ -87,7 +85,6 @@ module.exports.InsuranceCompanyController = require("./Masters/insurance_company
 
 //hr setup controller
 //todo: leave manager
-module.exports.charityController = require("./Masters/charity.controller");
 
 
 

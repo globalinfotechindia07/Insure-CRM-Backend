@@ -1,5 +1,4 @@
 const httpStatus = require("http-status");
-const GipsaaCompanyMasterModel = require("../../models/Masters/gipsaa_master.model");
 
 // Add gipsa company
 const addGipsaaCompany = async (req, res) => {

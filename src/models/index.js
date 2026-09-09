@@ -68,8 +68,6 @@ module.exports.TypeOfClientModel = require("./Client/TypeOfClient.model");
 
 // todo: Admin Client
 module.exports.AdminClientRegistrationModel = require("./Admin-Client/AdminClientRegistration.model");
-module.exports.AdminContactPersonModel = require("./Admin-Client/AdminContactPerson.model");
-module.exports.AdminTypeOfClientModel = require("./Admin-Client/AdminTypeOfClient.model");
 
 //todo: contacts
 module.exports.contactModel = require("./Contacts/Contacts.model");
@@ -85,11 +83,6 @@ module.exports.DesignationModel = require("./Masters/designation.model");
 module.exports.PaymentModeModel = require("./Masters/payment_mode.model");
 module.exports.EmployeeRoleModel = require("./Masters/employee_role.model");
 module.exports.LedgerModel = require("./Masters/ledger.model");
-module.exports.SubLedgerModel = require("./Masters/sub_ledger.model");
-module.exports.TPACompanyMasterModel = require("./Masters/tpa_master.model");
-module.exports.InsuranceCompanyMasterModel = require("./Masters/insurance_comapny_master.model");
-module.exports.GovCompanyMasterModel = require("./Masters/goverment_company_master.model");
-module.exports.CoOperateCompanyMasterModel = require("./Masters/co-operate_company_master.model");
 
 //hr setup master
 
@@ -107,12 +100,9 @@ module.exports.InvoiceNoModel = require("./InvoiceNumber/invoiceNo.model");
 
 
 //Role
-module.exports.RoleModel = require("./roles.model");
 
 
 //Category
-module.exports.ParentGroupModel = require("./Masters/parentGroup.model");
-module.exports.PayeeParentGroupModel = require("./Masters/payeeParent.model");
 module.exports.CategoryMasterModel = require("./Masters/category.model");
 
 // branch Settings
