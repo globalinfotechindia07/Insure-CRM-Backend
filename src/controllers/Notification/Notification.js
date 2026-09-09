@@ -1,6 +1,6 @@
 // notification.controller.js
 const Notification = require("../../models/Notification/Notification");
-const OpdPatientModel = require("../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../models/appointment-confirm/opdPatient.model");
 const { emitPatientApprovedRequest } = require("../../utils/socket");
 
 const createNotification = async (req, res) => {

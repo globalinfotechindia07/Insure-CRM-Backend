@@ -6,7 +6,7 @@ const {
   OPDTokenNoModel,
   AdminModel,
 } = require("../../models");
-const OpdPatientModel = require("../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../models/appointment-confirm/opdPatient.model");
 const PatientAppointment = require("../../models/Masters/patientAppointment.model");
 const { AppointmentSchedulingModel } = require("../../models");
 // Generic function to create billing

@@ -1,5 +1,5 @@
 const httpStatus = require("http-status");
-const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
 
 const {
   PatientProcedureModel,

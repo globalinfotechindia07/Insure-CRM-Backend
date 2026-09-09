@@ -16,7 +16,7 @@ const {
   PediatricHistoryModel,
   OtherHistoryModel
 } = require('../../models')
-const OpdPatientModel = require('../../models/appointment-confirm/opdPatient.model')
+// const OpdPatientModel = require('../../models/appointment-confirm/opdPatient.model')
 const FamilyHistoryProblem = require('../../models/OPD/familyHistory.model')
 
 const { FamilyMemberModel } = require('../../models')

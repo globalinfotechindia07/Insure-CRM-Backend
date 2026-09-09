@@ -1,6 +1,6 @@
 const httpStatus = require("http-status");
 const PatientPathologyModel = require("../../../models/OPD/Patient/patient_pathology.model");
-const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
 
 // ✅ Create a new pathology entry
 const createPathology = async (req, res) => {

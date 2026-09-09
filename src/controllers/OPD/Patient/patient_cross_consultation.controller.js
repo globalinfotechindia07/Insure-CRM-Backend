@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const PatientCrossConsultationModel = require("../../../models/OPD/Patient/patient_cross_consultation.model");
-const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
 
 // Create
 const createPatientCrossConsultation = async (req, res) => {

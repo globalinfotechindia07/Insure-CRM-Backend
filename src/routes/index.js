@@ -203,11 +203,7 @@ const RoomNoMaster = require("./Masters/../Manage Room/roomNo.route");
 const PatientAppointRouter = require("./Masters/patientAppointment.route");
 const ServiceRateRouter = require("./Masters/serviceRate.route");
 const ServiceRateRouterNew = require("./Masters/serviceRateNew.route");
-const IPDPatientRouter = require("./appointment-confirm/ipdPatient.controller");
-const DaycarePatientRouter = require("./appointment-confirm/daycarePatient.controller");
-const WalkinPatientRouter = require("./appointment-confirm/walkinPatient.controller");
-// const OPDPatientRouter = require("./appointment-confirm/opdPatient.route");
-const EmrPatientRouter = require("./appointment-confirm/emrPatient.controller");
+
 const walkinRoute = require("./Walkin/walkin.route");
 const FormSetupRouter = require("./Masters/formSetup.routes");
 const SinceRouter = require("./OPD/since.route");
@@ -762,26 +758,7 @@ const defaultRoutes = [
     path: "/service-rate-new",
     route: ServiceRateRouterNew,
   },
-  // {
-  //   path: "/opd-patient",
-  //   route: OPDPatientRouter,
-  // },
-  {
-    path: "/ipd-patient",
-    route: IPDPatientRouter,
-  },
-  {
-    path: "/walkin-patient",
-    route: WalkinPatientRouter,
-  },
-  {
-    path: "/daycare-patient",
-    route: DaycarePatientRouter,
-  },
-  {
-    path: "/emr-patient",
-    route: EmrPatientRouter,
-  },
+
   {
     path: "/form-setup",
     route: FormSetupRouter,

@@ -1,6 +1,6 @@
 const httpStatus = require("http-status");
 const PatientRadiologyModel = require("../../../models/OPD/Patient/patient_radiology.model");
-const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
+// const OpdPatientModel = require("../../../models/appointment-confirm/opdPatient.model");
 
 // ✅ Create a new radiology entry
 const createRadiology = async (req, res) => {
