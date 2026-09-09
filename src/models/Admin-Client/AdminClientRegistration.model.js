@@ -50,11 +50,11 @@ const AdminclientRegistrationSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    emergencyContactPerson: {
+     emergencyContactPerson: {
       type: String,
       trim: true,
     },
-    emergencyContactNo: {
+     emergencyContactNo: {
       type: String,
       trim: true,
     },

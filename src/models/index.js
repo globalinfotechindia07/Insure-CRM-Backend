@@ -7,11 +7,8 @@ module.exports.PincodeModel = require("./pincodes.model");
 module.exports.SuperAdminModel = require("./superAdmin.model");
 
 // Chat
-module.exports.ChatModel = require("./Chat/chat.model");
+
 //Room Manage
-module.exports.RoomTypeModel = require("./Manage Room/roomType.model");
-module.exports.bedMasterModel = require("./Manage Room/bedMaster.model");
-module.exports.rateMasterModel = require("./Manage Room/rateMaster.model");
 
 //todo: New Masters
 module.exports.BankDetailsModel = require("./Masters/Banking-Details/BankingDetails.model");
@@ -93,7 +90,6 @@ module.exports.PartyMasterModel = require("./Masters/partyMaster.model");
 module.exports.ProductMasterModel = require("./Masters/productMaster.model");
 module.exports.StoreModel = require("./Masters/store.model");
 module.exports.ServiceDetailsModel = require("./Masters/serviceDetailsMaster.model");
-module.exports.OPDPackageModel = require("./Masters/opd_package.model");
 module.exports.SurgeryPackageModel = require("./Masters/surgeryPackageMaster.model");
 module.exports.OtMasterModel = require("./Masters/otMaster.model");
 module.exports.UHID_MRN_Model = require("./Masters/uhid_mrn_name.model");
@@ -122,7 +118,7 @@ module.exports.DearnessAllowanceModel = require("./Masters/hr-setup/dearnessAllo
 module.exports.HRAAllowanceMasterModel = require("./Masters/hr-setup/hraAllowance.model");
 module.exports.OtherAllowanceModel = require("./Masters/hr-setup/otherAllowances.model");
 module.exports.TemplateSectionModel = require("./Masters/Template/templateSection.model");
-module.exports.TreatmentSheetModel = require("./Masters/ipd-form-setup/treatmentSheet.model");
+
 //Pathology
 module.exports.MachineMasterModel = require("./Masters/Pathology_Master/machineMaster.model");
 module.exports.InvestigationPathologyMasterModel = require("./Masters/Pathology_Master/investigationRadiologyMaster.model"); //now test master
@@ -147,68 +143,14 @@ module.exports.NursingAndParamedical = require("./Staffs/nursingAndParamedical/n
 module.exports.MedicalOfficer = require("./Staffs/medicalOfficer/medicalOfficer.model");
 module.exports.Consultant = require("./Staffs/consultant/consultant.model");
 
-//Patient
-module.exports.PatientModel = require("./Patient/patient.model");
-module.exports.BookApointmentModel = require("./Patient/bookappointment.model");
-module.exports.ConfirmAppointmentModel = require("./Patient/confirmappointment.model");
-module.exports.patientDetailsModel = require("./Patient/patientdetails.model");
 
-// OPD
-module.exports.OPDModel = require("./OPD/opd.model");
-module.exports.MedicalProblemModel = require("./OPD/medicalpro.model");
-module.exports.DrugHistoryModel = require("./OPD/drug_history.model");
-module.exports.DrugAllergyModel = require("./OPD/drug_allergy.model");
-module.exports.GeneralAllergyModel = require("./OPD/general_allergy.model");
-module.exports.FoodAllergyModel = require("./OPD/food_allergy.model");
-module.exports.FamilyMemberModel = require("./OPD/family_member.model");
-module.exports.LifeStyleModel = require("./OPD/life_style.model");
-module.exports.ProcedureModel = require("./OPD/procedure.model");
-module.exports.InstructionModel = require("./OPD/instructions.model");
-module.exports.ChiefComplaintModel = require("./OPD/chiefcomplaint.model");
-module.exports.PainChiefComplaintModel = require("./OPD/painChiefComplaint.model");
-module.exports.PresentIllnessHistoryModel = require("./OPD/present_illness_history.model");
-module.exports.ProvisionalDiagnosisModel = require("./OPD/provisional_diagnosis.model");
-module.exports.FinalDiagnosisModel = require("./OPD/final_diagnosis.model");
-module.exports.OPDMenuModel = require("./OPD/opd_menu.model");
-module.exports.RiskFactorModel = require("./OPD/risk_factor.model");
-module.exports.OPDBillingModel = require("./OPD/opd_billing.model");
-module.exports.OPDReceiptModel = require("./OPDBillReceipts/OPDBillReceipt.model");
-module.exports.GynacHistoryModel = require("./OPD/gynac_history.model");
-module.exports.OtherHistoryModel = require("./OPD/other_history.model");
-module.exports.ObstetricHistoryModel = require("./OPD/obstetric_history.model");
-module.exports.NutritionalHistoryModel = require("./OPD/nutritional_history.model");
-module.exports.PediatricHistoryModel = require("./OPD/pediatric_history.model");
-module.exports.OPDReceiptNoModel = require("./OPDReceiptNo/opdReceiptNo");
-module.exports.OPDTokenNoModel = require("./OPDTokenNo/OPDTokenNo");
 
-// OPD/Examination Starts
-module.exports.LocalExaminationModel = require("./OPD/Examination/local_examination.model");
-module.exports.GeneralExaminationModel = require("./OPD/Examination/general_examination.model");
-module.exports.SystematicExaminationModel = require("./OPD/Examination/systematic_examination.model");
-module.exports.OtherExaminationModel = require("./OPD/Examination/other_examination.model");
 
 //invoice no model
 module.exports.InvoiceNoModel = require("./InvoiceNumber/invoiceNo.model");
 
-// OPD/Patient Starts
-module.exports.PatientHistroyModel = require("./OPD/Patient/patient_history.model");
-module.exports.PatientChiefComplaintModel = require("./OPD/Patient/patient_chief_complaint.model");
-module.exports.PatientGlassPrescriptionModel = require("./OPD/Patient/patient_glasss_prescription.model");
-module.exports.PatientMedicalPrescriptionModel = require("./OPD/Patient/patient_medical_prescription.model");
-module.exports.PatientFollowUpModel = require("./OPD/Patient/patient_followup.model");
-module.exports.PatientProvisionalDiagnosisModel = require("./OPD/Patient/patient_provisional_diagnosis.model");
-module.exports.PatientFinalDiagnosisModel = require("./OPD/Patient/patient_final_diagnosis.model");
-module.exports.PatientProcedureModel = require("./OPD/Patient/patient_procedure.model");
-module.exports.PatientPresentIllnessHistoryModel = require("./OPD/Patient/patient_present_illness.model");
-module.exports.PatientLabRadiologyModel = require("./OPD/Patient/patient_lab_radiology.model");
-module.exports.PatientInstructionModel = require("./OPD/Patient/patient_instruction.model");
-module.exports.PatientVitalsModel = require("./OPD/Patient/patient_vitals.model");
-module.exports.PatientExaminationModel = require("./OPD/Patient/patient_examination.model");
 module.exports.EntryModel = require("./Masters/hr-setup/entry.model");
 
-//Emergency/Patient Starts
-module.exports.EmergencyPatientVitalsModel = require("./Emergency/Patient/emergency_patient_vitals.model");
-module.exports.EmergencyPatientChiefComplaintModel = require("./Emergency/Patient/emergency_patient_chief_complaint.model");
 
 //Role
 module.exports.RoleModel = require("./roles.model");
@@ -219,7 +161,6 @@ module.exports.RefferBy = require("./Masters/refferBy.model");
 //Category
 module.exports.ParentGroupModel = require("./Masters/parentGroup.model");
 module.exports.PayeeParentGroupModel = require("./Masters/payeeParent.model");
-module.exports.PatientPayeeModel = require("./Masters/patientpayee.model");
 module.exports.CategoryMasterModel = require("./Masters/category.model");
 
 // branch Settings

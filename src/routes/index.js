@@ -61,24 +61,18 @@ const holidayRoute = require("./Masters/Holiday/Holiday.route");
 // Old Masters
 const adminRoute = require("./admin.route");
 const pincodeRoute = require("./pincode.route");
-const ipdFormSetup = require("./ipd-form-setup/ipdFormSetup.routes");
-const templateSheetRoute = require("./ipd-form-setup/ipdFormSetup.routes");
+
 const TemplateRadiology = require("./Template/templateRadiology.route");
-const chatRoute = require("./Chat/chat.route");
+
 const designationRoute = require("./Masters/designation.route");
 const companySetupRoute = require("./companySetup.route");
 const departmentRoute = require("./departmentSetup.route");
 const billGroupRoute = require("./Masters/billGroup.route");
 const storeRoute = require("./Masters/store.route");
 const serviceDetailsRoute = require("./Masters/serviceDetails.route");
-const OPDPackageRoute = require("./Masters/opd-package.route");
-const opdConsultantServiceRouter = require("./Masters/opdConsultantService.route");
 const notificationRouter = require("./Notification/Notification");
 
 const surgeryPackageRoute = require("./Masters/surgeryPackage.route");
-const roomTypeRoute = require("./Manage Room/roomType.route");
-const bedMasterRoute = require("./Manage Room/bedMaster.route");
-const rateMasterRoute = require("./Manage Room/rateMaste.route");
 const otMasterRoute = require("./Masters/otMaster.route");
 const outsourceDiagnosticRoute = require("./Masters/outsourceDiagnostic.route");
 const partyMasterRoute = require("./Masters/partyMaster.route");
@@ -94,10 +88,6 @@ const vitalMaster = require("./Masters/clinical-setup/vitals-master/vital.route"
 const ledgerRouter = require("./Masters/ladger.route");
 const insuranceCompanyRouter = require("./Masters/insurance_company.route");
 const gipsaaCompanyRouter = require("./Masters/gipsaa_company.route");
-const visionOptionRouter = require("./OPD/Examination/opthalmology/visionOption");
-const findingOptionRouter = require("./OPD/Examination/opthalmology/findingOption");
-const dilatedOptionRouter = require("./OPD/Examination/opthalmology/arUndilated");
-const unDilatedOptionRouter = require("./OPD/Examination/opthalmology/arDilated");
 
 
 const departmentsRouter = require("../routes/departmentRoutes");
@@ -138,48 +128,16 @@ const nursingAndParamedicalRoute = require("./Staffs/nursingAndParamedical/nursi
 const medicalOfficerRoute = require("./Staffs/medicalOfficer/medicalOfficer.route");
 const newConsultantRoute = require("./Staffs/newConsultant/newConsultant.route");
 
-const patientRoute = require("./Patient/patient.route");
-const opdRoute = require("./OPD/opd.route");
-const opdBillingRouter = require("./OPDBilling/OPDBillingRoute");
 // OPD Patient Starts
-const PatientHistoryRoute = require("./OPD/Patient/patient_history.route");
-const PatientChiefComplaintRoute = require("./OPD/Patient/patient_chief_complaint.route");
-const PatientOpthelmicRoute = require("./OPD/Patient/patient_opthelmic.route");
-const PainPatientChiefComplaintRoute = require("./OPD/Patient/pain_chiefComplaintRoute");
-const PatientPresentIllnessRoute = require("./OPD/Patient/patient_present_illness.route");
-const PatientProvisionalDiagnosisRoute = require("./OPD/Patient/patient_provisional_diagnosis.route");
-const PatientFinalDiagnosisRoute = require("./OPD/Patient/patient_final_diagnosis.route");
-const PatientProcedureRoute = require("./OPD/Patient/patient_procedure.route");
-const PatientDiagnosticsRoutes = require("./OPD/Patient/patient_diagnostics.route");
-const PatientPathologyRoute = require("./OPD/Patient/patient_pathology");
-const PatientRadiologyRoute = require("./OPD/Patient/patient_radiology");
-const PatientLabRadiologyRoute = require("./OPD/Patient/patient_lab_radiology.route");
-const PatientInstructionRoute = require("./OPD/Patient/patient_instruction.route");
-const PatientVitalsRoute = require("./OPD/Patient/patient_vitals.route");
-const PatientExaminationRoute = require("./OPD/Patient/patient_examination.route");
-const PatientGlassPrescriptionRoute = require("./OPD/Patient/patient_glasss_prescription.route");
-const PatientMedicalPrescriptionRoute = require("./OPD/Patient/patient_medical_prescription.route");
-const PatientFollowUpRoute = require("./OPD/Patient/patient_followup.route");
 
-const OPDReceiptRoute = require("./OPDBillReceipts/OPDBillReceipt.route");
 // OPD Patient Ends
-const bookappointmentRoute = require("./Patient/bookappointment.route");
-const confirmappointmentRoute = require("./Patient/confirmappointment.route");
 const refferByRoute = require("./Masters/refferBy.route");
 const categoryRoute = require("./Masters/category.route");
 const EntryRouter = require("./Masters/hr-setup/entry.route");
 const OtherAllowancesRouter = require("./Masters/hr-setup/otherAllowance.route");
 
 //emergency
-const EmergencyRouter = require("./Emergency/emergencyRegestration.route");
-const EmergencyPatientVitalsRouter = require("./Emergency/Patient/emergency_patient_vitals.route");
-const EmergencyPatientProvisionalDiagnosisRoutes = require("./Emergency/Patient/emergency_patient_provisional_diagnosis.route");
-const EmergencyPatientChiefComplaintRouter = require("./Emergency/Patient/emergency_patient_chief_complaint.route");
-const EmergencyPatientFinalDiagnosisRoutes = require("./Emergency/Patient/emergency_patient_finalDiagnosis.route");
-const EmergencyPatientMedicalPrescriptionRoutes = require("./Emergency/Patient/emergency_patient_medical_prescription.route");
-const EmergencyPatientProcedureRoutes = require("./Emergency/Patient/emergency_patient_procedure.route");
-const EmergencyPatientInstructionRoutes = require("./Emergency/Patient/emergency_patient_instruction.route");
-const EmergencyPatientFollowUpRoutes = require("./Emergency/Patient/emergency_patient_followUp.route");
+// const EmergencyRouter = require("./Emergency/emergencyRegestration.route");
 const departmentTypeRouter = require("./departmentType.route");
 const departmentSubTypeRouter = require("./departmentSubType.route");
 
@@ -198,18 +156,12 @@ const doseMasterRoutes = require("./Masters/medicine/doseRoute");
 const brandMasterRoutes = require("./Masters/medicine/brandRoutes");
 
 const TimeIntervalMasterRouter = require("./Masters/timeInterval.route");
-const RoomCategoryMaster = require("./Masters/../Manage Room/category.route");
-const RoomNoMaster = require("./Masters/../Manage Room/roomNo.route");
-const PatientAppointRouter = require("./Masters/patientAppointment.route");
 const ServiceRateRouter = require("./Masters/serviceRate.route");
 const ServiceRateRouterNew = require("./Masters/serviceRateNew.route");
 
-const walkinRoute = require("./Walkin/walkin.route");
 const FormSetupRouter = require("./Masters/formSetup.routes");
-const SinceRouter = require("./OPD/since.route");
 const TemplateSectionRouter = require("./Template/templateSection.route");
 const formSetupVitalsMaster = require("./Masters/formSetup/formSetupVitalMaster.route");
-const crossConsultationRoute = require("./OPD/Patient/patient_cross_consultation.route");
 const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
 //invoice
@@ -267,10 +219,7 @@ const defaultRoutes = [
     path: "/admin",
     route: adminRoute,
   },
-  {
-    path: "/chat",
-    route: chatRoute,
-  },
+
   {
     path: "/company-setup",
     route: companySetupRoute,
@@ -307,14 +256,8 @@ const defaultRoutes = [
     path: "/service-details-master",
     route: serviceDetailsRoute,
   },
-  {
-    path: "/opd-package",
-    route: OPDPackageRoute,
-  },
-  {
-    path: "/opd-consultant-service",
-    route: opdConsultantServiceRouter,
-  },
+  
+  
   {
     path: "/surgery-package-master",
     route: surgeryPackageRoute,
@@ -383,26 +326,10 @@ const defaultRoutes = [
     path: "/appointmentSchedule-master",
     route: appointmentSchedulingRoute,
   },
-  {
-    path: "/room-category",
-    route: RoomCategoryMaster,
-  },
-  {
-    path: "/room-no",
-    route: RoomNoMaster,
-  },
-  {
-    path: "/room-type",
-    route: roomTypeRoute,
-  },
-  {
-    path: "/bed-master",
-    route: bedMasterRoute,
-  },
-  {
-    path: "/rate-master",
-    route: rateMasterRoute,
-  },
+
+  
+  
+  
 
   {
     path: "/diploma",
@@ -483,18 +410,9 @@ const defaultRoutes = [
     route: newConsultantRoute,
   },
 
-  {
-    path: "/patient",
-    route: patientRoute,
-  },
-  {
-    path: "/opd",
-    route: opdRoute,
-  },
-  {
-    path: "/opd-billing",
-    route: opdBillingRouter,
-  },
+  
+  
+  
   {
     path: "/notification",
     route: notificationRouter,
@@ -544,10 +462,7 @@ const defaultRoutes = [
     path: "/type-master",
     route: TypeRouter,
   },
-  {
-    path: "/template-sheet",
-    route: templateSheetRoute,
-  },
+
   {
     path: "/dose-master",
     route: doseMasterRoutes,
@@ -560,10 +475,7 @@ const defaultRoutes = [
     path: "/medicines",
     route: medicinesMasterRouter,
   },
-  {
-    path: "/since-master",
-    route: SinceRouter,
-  },
+
   {
     path: "/ledger",
     route: ledgerRouter,
@@ -576,114 +488,36 @@ const defaultRoutes = [
     path: "/gipsaa-company",
     route: gipsaaCompanyRouter,
   },
-  {
-    path: "/vision-options",
-    route: visionOptionRouter,
-  },
-  {
-    path: "/finding-options",
-    route: findingOptionRouter,
-  },
-  {
-    path: "/ar-options-dilated",
-    route: unDilatedOptionRouter,
-  },
-  {
-    path: "/ar-options-undilated",
-    route: dilatedOptionRouter,
-  },
+  
+  
+  
+  
   // OPD/Patient Start
-  {
-    path: "/patient-history",
-    route: PatientHistoryRoute,
-  },
-  {
-    path: "/patient-chief-complaint",
-    route: PatientChiefComplaintRoute,
-  },
-  {
-    path: "/patient-opthelmic",
-    route: PatientOpthelmicRoute,
-  },
-  {
-    path: "/pain-patient-chief-complaint",
-    route: PainPatientChiefComplaintRoute,
-  },
-  {
-    path: "/patient-present-illness",
-    route: PatientPresentIllnessRoute,
-  },
-  {
-    path: "/patient-provisional-diagnosis",
-    route: PatientProvisionalDiagnosisRoute,
-  },
-  {
-    path: "/patient-final-diagnosis",
-    route: PatientFinalDiagnosisRoute,
-  },
-  {
-    path: "/patient-procedure",
-    route: PatientProcedureRoute,
-  },
-  {
-    path: "/patient-cross-consultation",
-    route: crossConsultationRoute,
-  },
-  {
-    path: "/patient-diagnostics",
-    route: PatientDiagnosticsRoutes,
-  },
-  {
-    path: "/patient-pathology",
-    route: PatientPathologyRoute,
-  },
-  {
-    path: "/patient-radiology",
-    route: PatientRadiologyRoute,
-  },
-  {
-    path: "/patient-lab-radiology",
-    route: PatientLabRadiologyRoute,
-  },
-  {
-    path: "/patient-instruction",
-    route: PatientInstructionRoute,
-  },
-  {
-    path: "/patient-vital",
-    route: PatientVitalsRoute,
-  },
-  {
-    path: "/patient-examination",
-    route: PatientExaminationRoute,
-  },
-  {
-    path: "/patient-glass-prescription",
-    route: PatientGlassPrescriptionRoute,
-  },
-  {
-    path: "/patient-medical-prescription",
-    route: PatientMedicalPrescriptionRoute,
-  },
-  {
-    path: "/patient-followup",
-    route: PatientFollowUpRoute,
-  },
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
-  {
-    path: "/opd-receipt",
-    route: OPDReceiptRoute,
-  },
+  
 
   // OPD/Patient Ends
-  {
-    path: "/book-appointment",
-    route: bookappointmentRoute,
-  },
-  {
-    path: "/confirm-appointment",
-    route: confirmappointmentRoute,
-  },
+  
+  
 
   {
     path: "/refferBy",
@@ -698,58 +532,14 @@ const defaultRoutes = [
     route: otMasterRoute,
   },
 
-  //emergency
-  {
-    path: "/emergency_patient_registration",
-    route: EmergencyRouter,
-  },
 
-  {
-    path: "/emergency-patient-vitals",
-    route: EmergencyPatientVitalsRouter,
-  },
+  
 
-  {
-    path: "/emergency-patient-chief-complaint",
-    route: EmergencyPatientChiefComplaintRouter,
-  },
-
-  {
-    path: "/walkin",
-    route: walkinRoute,
-  },
-  {
-    path: "/emergency-patient-provisional-diagnosis",
-    route: EmergencyPatientProvisionalDiagnosisRoutes,
-  },
-  {
-    path: "/emergency-patient-final-diagnosis",
-    route: EmergencyPatientFinalDiagnosisRoutes,
-  },
-  {
-    path: "/emergency-patientMedical-prescription",
-    route: EmergencyPatientMedicalPrescriptionRoutes,
-  },
-  {
-    path: "/emergency-patient-procedure",
-    route: EmergencyPatientProcedureRoutes,
-  },
-  {
-    path: "/emergency-patient-instruction",
-    route: EmergencyPatientInstructionRoutes,
-  },
-  {
-    path: "/emergency-patient-followUp",
-    route: EmergencyPatientFollowUpRoutes,
-  },
   {
     path: "/time-interval",
     route: TimeIntervalMasterRouter,
   },
-  {
-    path: "/patient-appointment",
-    route: PatientAppointRouter,
-  },
+  
   {
     path: "/service-rate",
     route: ServiceRateRouter,
@@ -767,10 +557,7 @@ const defaultRoutes = [
     path: "/form-setup/vital-master",
     route: formSetupVitalsMaster,
   },
-  {
-    path: "/ipd-form-setup",
-    route: ipdFormSetup,
-  },
+
   {
     path: "/template-radiology",
     route: TemplateRadiology,

@@ -34,9 +34,9 @@ const basicDetailsSchema = new mongoose.Schema({
   permanentDistrict: { type: String },
   permanentState: { type: String },
 
-  emergencyContactPersonName: { type: String },
-  emergencyContactPersonMobileNumber: { type: String },
-  emergencyAddress: { type: String },
+   emergencyContactPersonName: { type: String },
+   emergencyContactPersonMobileNumber: { type: String },
+emergencyAddress: { type: String },
 });
 
 const pastEmploymentDetailsSchema = new mongoose.Schema({
@@ -95,7 +95,7 @@ const employmentDetailsSchema = new mongoose.Schema({
     default: [], // Ensure it defaults to an empty array if not provided
   },
 
-  emergency: {
+emergency: {
     type: [String], // Changed to array of strings
     default: [], // Ensure it defaults to an empty array if not provided
   },

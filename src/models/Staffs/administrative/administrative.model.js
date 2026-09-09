@@ -39,12 +39,12 @@ const basicDetailsSchema = new mongoose.Schema({
   permanentDistrict: { type: String }, // ✅
   permanentState: { type: String }, // ✅
 
-  //? Emergency Contact Information
-  emergencyContacts: [
+//? Emergency Contact Information
+   emergencyContacts: [
     {
-      emergencyContactPersonName: { type: String }, // ✅
-      emergencyAddress: { type: String }, // ✅
-      emergencyContactPersonMobileNumber: { type: String }, // ✅
+       emergencyContactPersonName: { type: String }, // ✅
+emergencyAddress: { type: String }, // ✅
+       emergencyContactPersonMobileNumber: { type: String }, // ✅
     },
   ],
 
@@ -286,11 +286,11 @@ module.exports = Administrative;
 //   permanentState: { type: String },
 
 //   // Emergency Contacts
-//   emergencyContacts: [
+ //   emergencyContacts: [
 //     {
-//       emergencyContactPersonName: { type: String },
+ //       emergencyContactPersonName: { type: String },
 //       emergencyAddress: { type: String },
-//       emergencyContactPersonMobileNumber: { type: String },
+ //       emergencyContactPersonMobileNumber: { type: String },
 //     },
 //   ],
 

@@ -32,9 +32,9 @@ const createDoctorInSteps = async (req, res) => {
       "With Header",
     ];
 
-    //creating two new arrays for emergency vitals
+//creating two new arrays for emergency vitals
 
-    const emergencyMenu = [
+const emergencyMenu = [
       "Vitals",
       "Chief Complaint",
       "Treating Provider Assessment",
@@ -52,7 +52,7 @@ const createDoctorInSteps = async (req, res) => {
       "Transfer/ Referred",
     ];
 
-    const emergencyPrintMenu = [
+const emergencyPrintMenu = [
       "Vitals",
       "Chief Complaint",
       "Medical Prescription",
@@ -149,8 +149,8 @@ const createDoctorInSteps = async (req, res) => {
       const opdMenu = new OPDMenuModel({
         menu: menu,
         printMenu: printMenu,
-        emergencyMenu: emergencyMenu,
-        emergencyPrintMenu: emergencyPrintMenu,
+emergencyMenu: emergencyMenu,
+emergencyPrintMenu: emergencyPrintMenu,
         consultantId: savedDoctor._id,
       });
 

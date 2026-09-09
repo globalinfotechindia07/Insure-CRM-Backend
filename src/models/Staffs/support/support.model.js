@@ -34,9 +34,9 @@ const basicDetailsSchema = new mongoose.Schema({
   permanentDistrict: { type: String },
   permanentState: { type: String },
 
-  emergencyContactPersonName: { type: String },
-  emergencyContactPersonMobileNumber: { type: String },
-  emergencyAddress: { type: String },
+   emergencyContactPersonName: { type: String },
+   emergencyContactPersonMobileNumber: { type: String },
+emergencyAddress: { type: String },
 
   minimumQualification: { type: String },
   diploma: { type: [String] },

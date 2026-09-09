@@ -34,13 +34,13 @@ const createBasicDetails = async (req, res) => {
 
     console.log("Bknd Basic details : ", basicDetails);
 
-    if (typeof basicDetails.emergencyContacts === "string") {
+     if (typeof basicDetails.emergencyContacts === "string") {
       try {
-        basicDetails.emergencyContacts = JSON.parse(
-          basicDetails.emergencyContacts
+         basicDetails.emergencyContacts = JSON.parse(
+           basicDetails.emergencyContacts
         );
       } catch (e) {
-        basicDetails.emergencyContacts = [];
+         basicDetails.emergencyContacts = [];
       }
     }
     // Create new basic details entry
@@ -255,14 +255,14 @@ const updateBasicDetails = async (req, res) => {
     basicDetails.bankName = cleanBankField(basicDetails.bankName);
     basicDetails.branchName = cleanBankField(basicDetails.branchName);
 
-    // Handle emergencyContacts as array
-    if (typeof basicDetails.emergencyContacts === "string") {
+     // Handle emergencyContacts as array
+     if (typeof basicDetails.emergencyContacts === "string") {
       try {
-        basicDetails.emergencyContacts = JSON.parse(
-          basicDetails.emergencyContacts
+         basicDetails.emergencyContacts = JSON.parse(
+           basicDetails.emergencyContacts
         );
       } catch (e) {
-        basicDetails.emergencyContacts = [];
+         basicDetails.emergencyContacts = [];
       }
     }
 
