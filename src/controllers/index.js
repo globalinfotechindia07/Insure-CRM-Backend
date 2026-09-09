@@ -1,7 +1,6 @@
 module.exports.adminController = require("./admin.controller");
 module.exports.companyController = require("./companySetup.controller");
 module.exports.departmentController = require("./departmentSetup.controller");
-module.exports.pincodeController = require("./pincode.controller");
 //todo superAdmin
 module.exports.superAdminController = require("./superAdmin.controller");
 
@@ -80,12 +79,8 @@ module.exports.leadController = require("./Lead-Management/lead.controller");
 module.exports.gstPercentageController = require("./Masters/GstPercentage/gstPercentage.controller");
 
 // Old Masters
-module.exports.appointmentSchedulingController = require("./Masters/appointment.controller");
 module.exports.billGroupController = require("./Masters/billGroup.controller");
 module.exports.designationController = require("./Masters/designation.controller");
-module.exports.partyMasterController = require("./Masters/partyMaster.controller");
-module.exports.productMasterController = require("./Masters/productMaster.controller");
-module.exports.storeController = require("./Masters/store.controller");
 module.exports.serviceDetailsController = require("./Masters/serviceDetailsMaster.controller");
 module.exports.PaymentModeController = require("./Masters/payment_mode.controller");
 module.exports.EmployeeRoleController = require("./Masters/employee_role.controller");
@@ -100,16 +95,9 @@ module.exports.charityController = require("./Masters/charity.controller");
 
 
 //Staffs
-module.exports.consultantController = require("./Satffs/consultants/consultants.controller"); //old consultant controller
-module.exports.employeeController = require("./Satffs/employee/employeee.controller");
 
 //newStaffApis
 
-module.exports.AdministrativeController = require("./Satffs/administrative/administrative.controller");
-module.exports.SupportController = require("./Satffs/support/support.controller");
-module.exports.NursingAndParamedicalController = require("./Satffs/nursingAndParamedical/nursinigAndParamedical.controller");
-module.exports.MedicalOfficerController = require("./Satffs/medicalOfficer/medicalOfficer.controller");
-module.exports.ConsultantsController = require("./Satffs/consultant/consultant.controller"); //new consultant controller
 
 
 
@@ -117,7 +105,6 @@ module.exports.ConsultantsController = require("./Satffs/consultant/consultant.c
 
 
 // Prefix
-module.exports.refferByController = require("./Masters/refferByMaster.controller");
 
 //Category
 module.exports.categoryController = require("./Masters/category.controller");
@@ -137,3 +124,9 @@ module.exports.taskManagementController = require("./TaskManagement/taskmanageme
 //ticket management
 
 module.exports.ticketManagementController = require("./TicketManagement/ticketManagement.controller");
+
+module.exports.AdministrativeController = require("./Satffs/administrative/administrative.controller");
+
+module.exports.employeeController = require("./Satffs/employee/employeee.controller");
+
+module.exports.SupportController = require("./Satffs/support/support.controller");

@@ -1,7 +1,6 @@
 module.exports.AdminModel = require("./admin.model");
 module.exports.CompanySetupModel = require("./companySetup.model");
 module.exports.DepartmentSetupModel = require("./departmentSetup.model");
-module.exports.PincodeModel = require("./pincodes.model");
 
 //todo: Super Admin
 module.exports.SuperAdminModel = require("./superAdmin.model");
@@ -85,9 +84,6 @@ module.exports.leadModel = require("./Lead-Management/Lead.model");
 module.exports.AppointmentSchedulingModel = require("./Masters/appointment.model");
 module.exports.BillGroupModel = require("./Masters/billgroup.model");
 module.exports.DesignationModel = require("./Masters/designation.model");
-module.exports.PartyMasterModel = require("./Masters/partyMaster.model");
-module.exports.ProductMasterModel = require("./Masters/productMaster.model");
-module.exports.StoreModel = require("./Masters/store.model");
 module.exports.ServiceDetailsModel = require("./Masters/serviceDetailsMaster.model");
 module.exports.PaymentModeModel = require("./Masters/payment_mode.model");
 module.exports.EmployeeRoleModel = require("./Masters/employee_role.model");
@@ -104,15 +100,7 @@ module.exports.CoOperateCompanyMasterModel = require("./Masters/co-operate_compa
 
 
 //Staffs
-module.exports.ConsultantModel = require("./Staffs/consultants/consultants.model");
-// module.exports.NursingModel = require("./Staffs/nursing/nursing.model");
-module.exports.EmployeeModel = require("./Staffs/employee/employee.model");
 
-module.exports.Administrative = require("./Staffs/administrative/administrative.model");
-module.exports.Support = require("./Staffs/support/support.model");
-module.exports.NursingAndParamedical = require("./Staffs/nursingAndParamedical/nursingAndParamedical.model");
-module.exports.MedicalOfficer = require("./Staffs/medicalOfficer/medicalOfficer.model");
-module.exports.Consultant = require("./Staffs/consultant/consultant.model");
 
 
 
@@ -125,8 +113,6 @@ module.exports.InvoiceNoModel = require("./InvoiceNumber/invoiceNo.model");
 //Role
 module.exports.RoleModel = require("./roles.model");
 
-//RefferBy
-module.exports.RefferBy = require("./Masters/refferBy.model");
 
 //Category
 module.exports.ParentGroupModel = require("./Masters/parentGroup.model");
@@ -141,3 +127,9 @@ module.exports.InvoiceModel = require("./Invoice/invoice.model");
 
 module.exports.TicketManageModel = require("./TicketManagement/TicketManagement.model");
 module.exports.CompanyModel = require("./Company");
+
+module.exports.Administrative = require("./Staffs/administrative/administrative.model");
+
+module.exports.EmployeeModel = require("./Staffs/employee/employee.model");
+
+module.exports.Support = require("./Staffs/support/support.model");

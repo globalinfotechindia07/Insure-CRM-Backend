@@ -60,19 +60,15 @@ const holidayRoute = require("./Masters/Holiday/Holiday.route");
 
 // Old Masters
 const adminRoute = require("./admin.route");
-const pincodeRoute = require("./pincode.route");
 
 
 const designationRoute = require("./Masters/designation.route");
 const companySetupRoute = require("./companySetup.route");
 const departmentRoute = require("./departmentSetup.route");
 const billGroupRoute = require("./Masters/billGroup.route");
-const storeRoute = require("./Masters/store.route");
 const serviceDetailsRoute = require("./Masters/serviceDetails.route");
 const notificationRouter = require("./Notification/Notification");
 
-const partyMasterRoute = require("./Masters/partyMaster.route");
-const productMasterRoute = require("./Masters/productMaster.route");
 const paymentModeRouter = require("./Masters/payment_mode.route");
 const employeeRoleRouter = require("./Masters/employee_role.route");
 
@@ -83,22 +79,12 @@ const gipsaaCompanyRouter = require("./Masters/gipsaa_company.route");
 
 const departmentsRouter = require("../routes/departmentRoutes");
 
-const appointmentSchedulingRoute = require("./Masters/appointment.route");
-const consultantRoute = require("./Staffs/consultant/consultant.route");
-const employeeRoute = require("./Staffs/employee/employee.route");
 
 //hr setup
-const administrativeRouter = require("./Staffs/administrative/administrative.route");
-const attendanceRouter = require("./Staffs/Attendance/attendance.routes");
-const support = require("./Staffs/support/support.route");
-const nursingAndParamedicalRoute = require("./Staffs/nursingAndParamedical/nursingAndParamedical.route");
-const medicalOfficerRoute = require("./Staffs/medicalOfficer/medicalOfficer.route");
-const newConsultantRoute = require("./Staffs/newConsultant/newConsultant.route");
 
 // OPD Patient Starts
 
 // OPD Patient Ends
-const refferByRoute = require("./Masters/refferBy.route");
 const categoryRoute = require("./Masters/category.route");
 
 //emergency
@@ -124,8 +110,6 @@ const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
 const InvoiceRouter = require("./Invoice/Invoice.route");
 const AdminclientRegistrationRouter = require("./Admin-client/adminClientRegistraion.route");
-const AdmincontactPersonRouter = require("./Admin-client/adminContactPerson.route");
-const AdmintypeOfClientRouter = require("./Admin-client/adminTypeOfClient.route");
 
 //Policy Management
 const policyDetailRouter = require("./PolicyManagement/PolicyDetail.route");
@@ -151,6 +135,10 @@ const posPatternRouter = require("./Masters/POSAndBQP/POSPattern.route");
 const bqpPatternRouter = require("./Masters/POSAndBQP/BQPPattern.route");
 // Add this line with your other imports
 const emailRoutes = require("./emailRoutes");
+const administrativeRouter = require("./Staffs/administrative/administrative.route");
+const employeeRoute = require("./Staffs/employee/employee.route");
+const support = require("./Staffs/support/support.route");
+const attendanceRouter = require("./Staffs/Attendance/attendance.routes");
 const router = express.Router();
 
 const surveyorRouter = require("../routes/surveyor.routes");
@@ -164,6 +152,22 @@ const claimRouter = require("../routes/claim.routes");
 
 
 const defaultRoutes = [
+  {
+    path: "/employee",
+    route: employeeRoute,
+  },
+  {
+    path: "/support",
+    route: support,
+  },
+  {
+    path: "/attendance",
+    route: attendanceRouter,
+  },
+  {
+    path: "/administrative",
+    route: administrativeRouter,
+  },
   // superAdmin
   {
     path: "/superAdmin",
@@ -191,10 +195,7 @@ const defaultRoutes = [
     path: "/department-sub-type",
     route: departmentSubTypeRouter,
   },
-  {
-    path: "/pincodes",
-    route: pincodeRoute,
-  },
+  
   {
     path: "/designation-master",
     route: designationRoute,
@@ -203,10 +204,7 @@ const defaultRoutes = [
     path: "/billgroup-master",
     route: billGroupRoute,
   },
-  {
-    path: "/store-master",
-    route: storeRoute,
-  },
+  
   {
     path: "/service-details-master",
     route: serviceDetailsRoute,
@@ -215,14 +213,6 @@ const defaultRoutes = [
   
   
   
-  {
-    path: "/party-master",
-    route: partyMasterRoute,
-  },
-  {
-    path: "/product-master",
-    route: productMasterRoute,
-  },
   
   
   
@@ -235,10 +225,9 @@ const defaultRoutes = [
   
   
   
-  {
-    path: "/appointmentSchedule-master",
-    route: appointmentSchedulingRoute,
-  },
+  
+  
+  
 
   
   
@@ -262,39 +251,18 @@ const defaultRoutes = [
   
   
 
-  {
-    path: "/consultant",
-    route: consultantRoute,
-  },
-  {
-    path: "/employee",
-    route: employeeRoute,
-  },
+  
+  
 
-  {
-    path: "/administrative",
-    route: administrativeRouter,
-  },
+  
 
-  {
-    path: "/support",
-    route: support,
-  },
+  
 
-  {
-    path: "/nursingAndParamedical",
-    route: nursingAndParamedicalRoute,
-  },
+  
 
-  {
-    path: "/medicalOfficer",
-    route: medicalOfficerRoute,
-  },
+  
 
-  {
-    path: "/newConsultant",
-    route: newConsultantRoute,
-  },
+  
 
   
   
@@ -369,10 +337,7 @@ const defaultRoutes = [
   
   
 
-  {
-    path: "/refferBy",
-    route: refferByRoute,
-  },
+  
   {
     path: "/category",
     route: categoryRoute,
@@ -446,10 +411,7 @@ const defaultRoutes = [
     path: "/profession",
     route: professionRouter,
   },
-  {
-    path: "/attendance",
-    route: attendanceRouter,
-  },
+  
   {
     path: "/position",
     route: positionRouter,
@@ -534,14 +496,8 @@ const defaultRoutes = [
     path: "/admin-clientRegistration",
     route: AdminclientRegistrationRouter,
   },
-  {
-    path: "/admin-contactPerson",
-    route: AdmincontactPersonRouter,
-  },
-  {
-    path: "/admin-typeOfClient",
-    route: AdmintypeOfClientRouter,
-  },
+  
+  
 
   //todo: prefix
   {
