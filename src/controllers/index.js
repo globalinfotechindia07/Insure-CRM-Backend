@@ -75,7 +75,6 @@ module.exports.prospectController = require("./Prospect/prospect.controller");
 module.exports.leadController = require("./Lead-Management/lead.controller");
 
 //todo: leave manager
-// module.exports.LeaveManagerController = require('../controllers/Masters/hr-setup/leaveManager.controller')
 
 //todo: GST Percentage
 module.exports.gstPercentageController = require("./Masters/GstPercentage/gstPercentage.controller");
@@ -84,48 +83,21 @@ module.exports.gstPercentageController = require("./Masters/GstPercentage/gstPer
 module.exports.appointmentSchedulingController = require("./Masters/appointment.controller");
 module.exports.billGroupController = require("./Masters/billGroup.controller");
 module.exports.designationController = require("./Masters/designation.controller");
-module.exports.outsourceDiagnosticontroller = require("./Masters/outsourceDiagnostic.controller");
 module.exports.partyMasterController = require("./Masters/partyMaster.controller");
 module.exports.productMasterController = require("./Masters/productMaster.controller");
 module.exports.storeController = require("./Masters/store.controller");
 module.exports.serviceDetailsController = require("./Masters/serviceDetailsMaster.controller");
-module.exports.surgeryPackageController = require("./Masters/surgeryPackageMaster.controller");
-module.exports.OtMasterController = require("./Masters/otMaster.controller");
-module.exports.UHID_MRN_NAME_Controller = require("./Masters/uhid_mrn_name.controller");
 module.exports.PaymentModeController = require("./Masters/payment_mode.controller");
 module.exports.EmployeeRoleController = require("./Masters/employee_role.controller");
-module.exports.VitalsMasterController = require("./Masters/vitals.controller");
-module.exports.MedicinesMasterController = require("./Masters/medicines.controller");
 module.exports.LegderMasterController = require("./Masters/ledger.controller");
 module.exports.InsuranceCompanyController = require("./Masters/insurance_company.controller");
 
 //hr setup controller
-module.exports.diplomaController = require("./Masters/hr-setup/diploma.controller");
-module.exports.graduationController = require("./Masters/hr-setup/graduation.controller");
-module.exports.postGraduationController = require("./Masters/hr-setup/postGraduation.controller");
-module.exports.superSpecializationController = require("./Masters/hr-setup/superSpecialization.controller");
-module.exports.listOfCouncilsController = require("./Masters/hr-setup/listOfCouncil.controller");
-module.exports.typeOfLeaveController = require("./Masters/hr-setup/typeOfLeave.controller");
 //todo: leave manager
-module.exports.leaveManagerController = require("./Masters/hr-setup/leaveManager.controller");
-module.exports.dearnessAllowanceController = require("./Masters/hr-setup/dearnessAllowance.controller");
-module.exports.hraAllowanceController = require("./Masters/hr-setup/hraAllowance.controller");
-module.exports.otherAllowanceController = require("./Masters/hr-setup/otherAllowances.controller");
-module.exports.entryController = require("./Masters/hr-setup/entry.controller");
 module.exports.charityController = require("./Masters/charity.controller");
 
-//Pathology
-module.exports.InvestigationPathologyMasterController = require("./Masters/Pathology_Master/investigationRadiologyMaster.controller");
-module.exports.machineController = require("./Masters/Pathology_Master/machineMaster.controller");
-module.exports.specimenController = require("./Masters/Pathology_Master/specimen.controller");
-module.exports.unitController = require("./Masters/Pathology_Master/unitMaster.controller");
 
 
-//Radiology
-module.exports.InvestigationRadiologyMasterController = require("./Masters/Radiology_Master/investigationRadiologyMaster.controller");
-module.exports.machineRadiologyMasterController = require("./Masters/Radiology_Master/machineRadiologyMaster.controller");
-module.exports.specimenRadiologyMasterController = require("./Masters/Radiology_Master/specimenRadiologyMaster.controller");
-module.exports.unitRadiologyController = require("./Masters/Radiology_Master/unitRadiologyMaster.controller");
 
 //Staffs
 module.exports.consultantController = require("./Satffs/consultants/consultants.controller"); //old consultant controller

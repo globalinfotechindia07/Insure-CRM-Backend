@@ -71,18 +71,10 @@ const storeRoute = require("./Masters/store.route");
 const serviceDetailsRoute = require("./Masters/serviceDetails.route");
 const notificationRouter = require("./Notification/Notification");
 
-const surgeryPackageRoute = require("./Masters/surgeryPackage.route");
-const otMasterRoute = require("./Masters/otMaster.route");
-const outsourceDiagnosticRoute = require("./Masters/outsourceDiagnostic.route");
 const partyMasterRoute = require("./Masters/partyMaster.route");
 const productMasterRoute = require("./Masters/productMaster.route");
-const UHID_MRN_NAMERouter = require("./Masters/uhid_mrn_name.route");
 const paymentModeRouter = require("./Masters/payment_mode.route");
 const employeeRoleRouter = require("./Masters/employee_role.route");
-const vitalsMasterRouter = require("./Masters/vitals.route");
-const unitMasterRouter = require("./Masters/clinical-setup/unit-master/unitMaster.route");
-const ageGroupMasterRouter = require("./Masters/clinical-setup/age-group-master/ageGroup.route");
-const vitalMaster = require("./Masters/clinical-setup/vitals-master/vital.route");
 
 const ledgerRouter = require("./Masters/ladger.route");
 const insuranceCompanyRouter = require("./Masters/insurance_company.route");
@@ -91,35 +83,11 @@ const gipsaaCompanyRouter = require("./Masters/gipsaa_company.route");
 
 const departmentsRouter = require("../routes/departmentRoutes");
 
-const medicinesMasterRouter = require("./Masters/medicines.route");
-const unitMasterRoute = require("./Masters/Pathology_Master/unitMaster.route");
-const unitRadiologyMasterRoute = require("./Masters/Radiology_Master/unitRadiology.route");
-const specimenMasterRoute = require("./Masters/Pathology_Master/specimenMaster.route");
-const specimenRadiologyMasterRoute = require("./Masters/Radiology_Master/specimenRadiologyMaster.route");
-const machineMasterRoute = require("./Masters/Pathology_Master/machineMaster.route");
-const investigationPathologyMasterRoute = require("./Masters/Pathology_Master/investigationRadiologyMaster.route");
-const servicePathologyRate = require("./Masters/Pathology_Master/serviceRatePathology");
 const appointmentSchedulingRoute = require("./Masters/appointment.route");
-const machineRadiologyMasterRoute = require("./Masters/Radiology_Master/machineRadiologyMaster.route");
-const otherDiagnosticsMachineRoute = require("./Masters/OtherDiagnostics/MachineMaster.route");
-const investigationRadiologyMasterRoute = require("./Masters/Radiology_Master/investigationRadiologyMaster.route");
-const OtherDiagnostics = require("./Masters/OtherDiagnostics/OtherDiagnostics.route");
-const ProcedureRoute = require("./Masters/ProcedureMaster/Procedure.route");
 const consultantRoute = require("./Staffs/consultant/consultant.route");
 const employeeRoute = require("./Staffs/employee/employee.route");
 
 //hr setup
-const diplomaRouter = require("./Masters/hr-setup/diploma.route");
-const graduationRoute = require("./Masters/hr-setup/graduation.route");
-const postGraduationRoute = require("./Masters/hr-setup/postGraduation.route");
-const superSpecialization = require("./Masters/hr-setup/superSpecialization.route");
-const listOfCouncilsRoute = require("./Masters/hr-setup/listOfCouncils.route");
-const typeOfLeaveRoute = require("./Masters/hr-setup/typeOfLeave.route");
-const leaveManagerRouter = require("./Masters/hr-setup/leaveManager.route");
-const dearnessAllowanceRoute = require("./Masters/hr-setup/dearnessAllowance.route");
-const hraAllowanceRoute = require("./Masters/hr-setup/hraAllowance.route");
-const PTRouter = require("./Masters/hr-setup/pt.route");
-const IncomeRouter = require("./Masters/hr-setup/income.route");
 const administrativeRouter = require("./Staffs/administrative/administrative.route");
 const attendanceRouter = require("./Staffs/Attendance/attendance.routes");
 const support = require("./Staffs/support/support.route");
@@ -132,8 +100,6 @@ const newConsultantRoute = require("./Staffs/newConsultant/newConsultant.route")
 // OPD Patient Ends
 const refferByRoute = require("./Masters/refferBy.route");
 const categoryRoute = require("./Masters/category.route");
-const EntryRouter = require("./Masters/hr-setup/entry.route");
-const OtherAllowancesRouter = require("./Masters/hr-setup/otherAllowance.route");
 
 //emergency
 // const EmergencyRouter = require("./Emergency/emergencyRegestration.route");
@@ -147,19 +113,11 @@ const renewalReminderRouter = require("../routes/renewalReminder.routes");
 
 const companysRouter = require("../routes/companyRoutes");
 
-const TypeRouter = require("./Masters/medicine/typeRoutes");
-const genericRoutes = require("./Masters/medicine/genericRoute");
-const routeRoute = require("./Masters/medicine/routeRoutes");
-const categoryMasterRoutes = require("./Masters/medicine/categoryRoute");
-const doseMasterRoutes = require("./Masters/medicine/doseRoute");
-const brandMasterRoutes = require("./Masters/medicine/brandRoutes");
 
 const TimeIntervalMasterRouter = require("./Masters/timeInterval.route");
 const ServiceRateRouter = require("./Masters/serviceRate.route");
 const ServiceRateRouterNew = require("./Masters/serviceRateNew.route");
 
-const FormSetupRouter = require("./Masters/formSetup.routes");
-const formSetupVitalsMaster = require("./Masters/formSetup/formSetupVitalMaster.route");
 const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
 //invoice
@@ -255,14 +213,8 @@ const defaultRoutes = [
   },
   
   
-  {
-    path: "/surgery-package-master",
-    route: surgeryPackageRoute,
-  },
-  {
-    path: "/outsourceDiagnostic-master",
-    route: outsourceDiagnosticRoute,
-  },
+  
+  
   {
     path: "/party-master",
     route: partyMasterRoute,
@@ -271,54 +223,18 @@ const defaultRoutes = [
     path: "/product-master",
     route: productMasterRoute,
   },
-  {
-    path: "/unit-pathology-master",
-    route: unitMasterRoute,
-  },
-  {
-    path: "/unit-radiology-master",
-    route: unitRadiologyMasterRoute,
-  },
-  {
-    path: "/specimen-pathology-master",
-    route: specimenMasterRoute,
-  },
-  {
-    path: "/specimen-radiology-master",
-    route: specimenRadiologyMasterRoute,
-  },
-  {
-    path: "/machine-pathology-master",
-    route: machineMasterRoute,
-  },
-  {
-    path: "/machine-radiology-master",
-    route: machineRadiologyMasterRoute,
-  },
-  {
-    path: "/other-diagnostics-machine-master",
-    route: otherDiagnosticsMachineRoute,
-  },
-  {
-    path: "/investigation-radiology-master",
-    route: investigationRadiologyMasterRoute,
-  },
-  {
-    path: "/other-diagnostics-master",
-    route: OtherDiagnostics,
-  },
-  {
-    path: "/procedure-master",
-    route: ProcedureRoute,
-  },
-  {
-    path: "/investigation-pathology-master",
-    route: investigationPathologyMasterRoute,
-  },
-  {
-    path: "/investigation-pathology-service-rate",
-    route: servicePathologyRate,
-  },
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   {
     path: "/appointmentSchedule-master",
     route: appointmentSchedulingRoute,
@@ -328,50 +244,23 @@ const defaultRoutes = [
   
   
 
-  {
-    path: "/diploma",
-    route: diplomaRouter,
-  },
+  
 
-  {
-    path: "/graduation",
-    route: graduationRoute,
-  },
+  
 
-  {
-    path: "/postGraduation",
-    route: postGraduationRoute,
-  },
+  
 
-  {
-    path: "/superSpecialization",
-    route: superSpecialization,
-  },
+  
     {
     path: "/department",
     route: departmentsRouter,  // Using new department module
   },
 
-  {
-    path: "/listOfCouncils",
-    route: listOfCouncilsRoute,
-  },
-  {
-    path: "/typeOfLeave",
-    route: typeOfLeaveRoute,
-  },
-  {
-    path: "/leaveManager",
-    route: leaveManagerRouter,
-  },
-  {
-    path: "/dearnessAllowance",
-    route: dearnessAllowanceRoute,
-  },
-  {
-    path: "/hraAllowance",
-    route: hraAllowanceRoute,
-  },
+  
+  
+  
+  
+  
 
   {
     path: "/consultant",
@@ -414,10 +303,7 @@ const defaultRoutes = [
     path: "/notification",
     route: notificationRouter,
   },
-  {
-    path: "/uhid",
-    route: UHID_MRN_NAMERouter,
-  },
+  
   {
     path: "/payment-mode",
     route: paymentModeRouter,
@@ -426,52 +312,19 @@ const defaultRoutes = [
     path: "/employee-role",
     route: employeeRoleRouter,
   },
-  {
-    path: "/vitals",
-    route: vitalsMasterRouter,
-  },
-  {
-    path: "/clinical-setup",
-    route: unitMasterRouter,
-  },
-  {
-    path: "/age-group",
-    route: ageGroupMasterRouter,
-  },
-  {
-    path: "/vital-master",
-    route: vitalMaster,
-  },
+  
+  
+  
+  
 
-  {
-    path: "/category-master",
-    route: categoryMasterRoutes,
-  },
-  {
-    path: "/generic-master",
-    route: genericRoutes,
-  },
-  {
-    path: "/route-master",
-    route: routeRoute,
-  },
-  {
-    path: "/type-master",
-    route: TypeRouter,
-  },
+  
+  
+  
+  
 
-  {
-    path: "/dose-master",
-    route: doseMasterRoutes,
-  },
-  {
-    path: "/brand-master",
-    route: brandMasterRoutes,
-  },
-  {
-    path: "/medicines",
-    route: medicinesMasterRouter,
-  },
+  
+  
+  
 
   {
     path: "/ledger",
@@ -524,10 +377,7 @@ const defaultRoutes = [
     path: "/category",
     route: categoryRoute,
   },
-  {
-    path: "/ot-master",
-    route: otMasterRoute,
-  },
+  
 
 
   
@@ -546,32 +396,14 @@ const defaultRoutes = [
     route: ServiceRateRouterNew,
   },
 
-  {
-    path: "/form-setup",
-    route: FormSetupRouter,
-  },
-  {
-    path: "/form-setup/vital-master",
-    route: formSetupVitalsMaster,
-  },
+  
+  
 
   
-  {
-    path: "/pt",
-    route: PTRouter,
-  },
-  {
-    path: "/entry",
-    route: EntryRouter,
-  },
-  {
-    path: "/income",
-    route: IncomeRouter,
-  },
-  {
-    path: "/otherAllowances",
-    route: OtherAllowancesRouter,
-  },
+  
+  
+  
+  
   
   //todo: New Masters
   {

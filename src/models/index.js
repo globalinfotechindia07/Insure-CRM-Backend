@@ -85,18 +85,12 @@ module.exports.leadModel = require("./Lead-Management/Lead.model");
 module.exports.AppointmentSchedulingModel = require("./Masters/appointment.model");
 module.exports.BillGroupModel = require("./Masters/billgroup.model");
 module.exports.DesignationModel = require("./Masters/designation.model");
-module.exports.OutsourceDiagnosticsModel = require("./Masters/outsourceDiagnostic.model");
 module.exports.PartyMasterModel = require("./Masters/partyMaster.model");
 module.exports.ProductMasterModel = require("./Masters/productMaster.model");
 module.exports.StoreModel = require("./Masters/store.model");
 module.exports.ServiceDetailsModel = require("./Masters/serviceDetailsMaster.model");
-module.exports.SurgeryPackageModel = require("./Masters/surgeryPackageMaster.model");
-module.exports.OtMasterModel = require("./Masters/otMaster.model");
-module.exports.UHID_MRN_Model = require("./Masters/uhid_mrn_name.model");
 module.exports.PaymentModeModel = require("./Masters/payment_mode.model");
 module.exports.EmployeeRoleModel = require("./Masters/employee_role.model");
-module.exports.VitalModel = require("./Masters/vitals.model");
-module.exports.MedicinesModel = require("./Masters/medicine.model");
 module.exports.LedgerModel = require("./Masters/ledger.model");
 module.exports.File = require("./Masters/Template/file.model");
 module.exports.SubLedgerModel = require("./Masters/sub_ledger.model");
@@ -104,32 +98,10 @@ module.exports.TPACompanyMasterModel = require("./Masters/tpa_master.model");
 module.exports.InsuranceCompanyMasterModel = require("./Masters/insurance_comapny_master.model");
 module.exports.GovCompanyMasterModel = require("./Masters/goverment_company_master.model");
 module.exports.CoOperateCompanyMasterModel = require("./Masters/co-operate_company_master.model");
-module.exports.IncomeModel = require("./Masters/hr-setup/income.model");
 
 //hr setup master
-module.exports.DiplomaMasterModel = require("./Masters/hr-setup/diploma.model");
-module.exports.GraduationMasterModel = require("./Masters/hr-setup/graduation.model");
-module.exports.PostGraduationMasterModel = require("./Masters/hr-setup/postGraduation.model");
-module.exports.ListOfCouncilMasterModel = require("./Masters/hr-setup/listOfCouncil.model");
-module.exports.SuperSpecializationMasterModel = require("./Masters/hr-setup/superSpecialization.model");
-module.exports.TypeOfLeaveMasterModel = require("./Masters/hr-setup/typeOfLeave.model");
-module.exports.LeaveManagerModel = require("./Masters/hr-setup/leaveManager.model");
-module.exports.DearnessAllowanceModel = require("./Masters/hr-setup/dearnessAllowance.model");
-module.exports.HRAAllowanceMasterModel = require("./Masters/hr-setup/hraAllowance.model");
-module.exports.OtherAllowanceModel = require("./Masters/hr-setup/otherAllowances.model");
 
-//Pathology
-module.exports.MachineMasterModel = require("./Masters/Pathology_Master/machineMaster.model");
-module.exports.InvestigationPathologyMasterModel = require("./Masters/Pathology_Master/investigationRadiologyMaster.model"); //now test master
-module.exports.SpecimenModel = require("./Masters/Pathology_Master/specimenMaster.model");
-module.exports.UnitMasterModel = require("./Masters/Pathology_Master/unitMaster.model");
-module.exports.ProfileMasterModel = require("./Masters/Pathology_Master/profileMaster.model");
 
-//Radiology
-module.exports.MachineRadiologyMasterModel = require("./Masters/Radiology_Master/machineRadiologyMaster.model");
-module.exports.InvestigationRadiologyMasterModel = require("./Masters/Radiology_Master/investigationRadiologyMaster.model");
-module.exports.SpecimenRadiologyMasterModel = require("./Masters/Radiology_Master/specimenRadiologyMaster.model");
-module.exports.UnitRadiologyMasterModel = require("./Masters/Radiology_Master/unitRadiolgyMaster.model");
 
 //Staffs
 module.exports.ConsultantModel = require("./Staffs/consultants/consultants.model");
@@ -148,7 +120,6 @@ module.exports.Consultant = require("./Staffs/consultant/consultant.model");
 //invoice no model
 module.exports.InvoiceNoModel = require("./InvoiceNumber/invoiceNo.model");
 
-module.exports.EntryModel = require("./Masters/hr-setup/entry.model");
 
 
 //Role
