@@ -98,7 +98,6 @@ module.exports.VitalsMasterController = require("./Masters/vitals.controller");
 module.exports.MedicinesMasterController = require("./Masters/medicines.controller");
 module.exports.LegderMasterController = require("./Masters/ledger.controller");
 module.exports.InsuranceCompanyController = require("./Masters/insurance_company.controller");
-module.exports.TemplateSectionController = require("./Template/templateSection.controller");
 
 //hr setup controller
 module.exports.diplomaController = require("./Masters/hr-setup/diploma.controller");

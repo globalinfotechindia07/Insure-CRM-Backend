@@ -62,7 +62,6 @@ const holidayRoute = require("./Masters/Holiday/Holiday.route");
 const adminRoute = require("./admin.route");
 const pincodeRoute = require("./pincode.route");
 
-const TemplateRadiology = require("./Template/templateRadiology.route");
 
 const designationRoute = require("./Masters/designation.route");
 const companySetupRoute = require("./companySetup.route");
@@ -160,7 +159,6 @@ const ServiceRateRouter = require("./Masters/serviceRate.route");
 const ServiceRateRouterNew = require("./Masters/serviceRateNew.route");
 
 const FormSetupRouter = require("./Masters/formSetup.routes");
-const TemplateSectionRouter = require("./Template/templateSection.route");
 const formSetupVitalsMaster = require("./Masters/formSetup/formSetupVitalMaster.route");
 const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
@@ -194,7 +192,6 @@ const bqpRouter = require("./Masters/POSAndBQP/BQP.route");
 const posPatternRouter = require("./Masters/POSAndBQP/POSPattern.route");
 const bqpPatternRouter = require("./Masters/POSAndBQP/BQPPattern.route");
 // Add this line with your other imports
-const paymentRoutes = require("./Payment/payment.route");
 const emailRoutes = require("./emailRoutes");
 const router = express.Router();
 
@@ -558,10 +555,7 @@ const defaultRoutes = [
     route: formSetupVitalsMaster,
   },
 
-  {
-    path: "/template-radiology",
-    route: TemplateRadiology,
-  },
+  
   {
     path: "/pt",
     route: PTRouter,
@@ -578,10 +572,7 @@ const defaultRoutes = [
     path: "/otherAllowances",
     route: OtherAllowancesRouter,
   },
-  {
-    path: "/section",
-    route: TemplateSectionRouter,
-  },
+  
   //todo: New Masters
   {
     path: "/bankDetails",
@@ -766,10 +757,7 @@ const defaultRoutes = [
     path: "/task-manager",
     route: taskmanagementrouter,
   },
-  {
-  path: "/payment",
-  route: paymentRoutes,
-},
+  
 {
   path: "/email",
   route: emailRoutes,

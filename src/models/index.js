@@ -117,7 +117,6 @@ module.exports.LeaveManagerModel = require("./Masters/hr-setup/leaveManager.mode
 module.exports.DearnessAllowanceModel = require("./Masters/hr-setup/dearnessAllowance.model");
 module.exports.HRAAllowanceMasterModel = require("./Masters/hr-setup/hraAllowance.model");
 module.exports.OtherAllowanceModel = require("./Masters/hr-setup/otherAllowances.model");
-module.exports.TemplateSectionModel = require("./Masters/Template/templateSection.model");
 
 //Pathology
 module.exports.MachineMasterModel = require("./Masters/Pathology_Master/machineMaster.model");
