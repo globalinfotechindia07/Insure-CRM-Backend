@@ -79,9 +79,7 @@ module.exports.leadController = require("./Lead-Management/lead.controller");
 module.exports.gstPercentageController = require("./Masters/GstPercentage/gstPercentage.controller");
 
 // Old Masters
-module.exports.billGroupController = require("./Masters/billGroup.controller");
 module.exports.designationController = require("./Masters/designation.controller");
-module.exports.serviceDetailsController = require("./Masters/serviceDetailsMaster.controller");
 module.exports.PaymentModeController = require("./Masters/payment_mode.controller");
 module.exports.EmployeeRoleController = require("./Masters/employee_role.controller");
 module.exports.LegderMasterController = require("./Masters/ledger.controller");

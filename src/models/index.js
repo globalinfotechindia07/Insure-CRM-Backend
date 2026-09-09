@@ -81,14 +81,10 @@ module.exports.prospectModel = require("./Prospect/Prospect.model");
 module.exports.leadModel = require("./Lead-Management/Lead.model");
 
 // Old Masters
-module.exports.AppointmentSchedulingModel = require("./Masters/appointment.model");
-module.exports.BillGroupModel = require("./Masters/billgroup.model");
 module.exports.DesignationModel = require("./Masters/designation.model");
-module.exports.ServiceDetailsModel = require("./Masters/serviceDetailsMaster.model");
 module.exports.PaymentModeModel = require("./Masters/payment_mode.model");
 module.exports.EmployeeRoleModel = require("./Masters/employee_role.model");
 module.exports.LedgerModel = require("./Masters/ledger.model");
-module.exports.File = require("./Masters/Template/file.model");
 module.exports.SubLedgerModel = require("./Masters/sub_ledger.model");
 module.exports.TPACompanyMasterModel = require("./Masters/tpa_master.model");
 module.exports.InsuranceCompanyMasterModel = require("./Masters/insurance_comapny_master.model");

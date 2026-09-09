@@ -65,8 +65,6 @@ const adminRoute = require("./admin.route");
 const designationRoute = require("./Masters/designation.route");
 const companySetupRoute = require("./companySetup.route");
 const departmentRoute = require("./departmentSetup.route");
-const billGroupRoute = require("./Masters/billGroup.route");
-const serviceDetailsRoute = require("./Masters/serviceDetails.route");
 const notificationRouter = require("./Notification/Notification");
 
 const paymentModeRouter = require("./Masters/payment_mode.route");
@@ -88,7 +86,6 @@ const departmentsRouter = require("../routes/departmentRoutes");
 const categoryRoute = require("./Masters/category.route");
 
 //emergency
-// const EmergencyRouter = require("./Emergency/emergencyRegestration.route");
 const departmentTypeRouter = require("./departmentType.route");
 const departmentSubTypeRouter = require("./departmentSubType.route");
 
@@ -101,8 +98,6 @@ const companysRouter = require("../routes/companyRoutes");
 
 
 const TimeIntervalMasterRouter = require("./Masters/timeInterval.route");
-const ServiceRateRouter = require("./Masters/serviceRate.route");
-const ServiceRateRouterNew = require("./Masters/serviceRateNew.route");
 
 const branchSettingsRouter = require("./BranchSettings/BranchSettings.route");
 
@@ -152,18 +147,9 @@ const claimRouter = require("../routes/claim.routes");
 
 
 const defaultRoutes = [
-  {
-    path: "/employee",
-    route: employeeRoute,
-  },
-  {
-    path: "/support",
-    route: support,
-  },
-  {
-    path: "/attendance",
-    route: attendanceRouter,
-  },
+  
+  
+  
   {
     path: "/administrative",
     route: administrativeRouter,
@@ -200,15 +186,9 @@ const defaultRoutes = [
     path: "/designation-master",
     route: designationRoute,
   },
-  {
-    path: "/billgroup-master",
-    route: billGroupRoute,
-  },
   
-  {
-    path: "/service-details-master",
-    route: serviceDetailsRoute,
-  },
+  
+  
   
   
   
@@ -276,10 +256,7 @@ const defaultRoutes = [
     path: "/payment-mode",
     route: paymentModeRouter,
   },
-  {
-    path: "/employee-role",
-    route: employeeRoleRouter,
-  },
+  
   
   
   
@@ -352,14 +329,8 @@ const defaultRoutes = [
     route: TimeIntervalMasterRouter,
   },
   
-  {
-    path: "/service-rate",
-    route: ServiceRateRouter,
-  },
-  {
-    path: "/service-rate-new",
-    route: ServiceRateRouterNew,
-  },
+  
+  
 
   
   
