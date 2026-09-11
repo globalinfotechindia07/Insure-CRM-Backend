@@ -202,6 +202,7 @@ const defaultRoutes = [
   { path: "/claim", route: claimRouter },
   { path: "/renewal-reminder", route: renewalReminderRouter },
   { path: "/company", route: companysRouter },
+  { path: "/leaveManager", route: require("./LeaveManager/leaveManager.route") },
 ];
 
 defaultRoutes.forEach((route) => {

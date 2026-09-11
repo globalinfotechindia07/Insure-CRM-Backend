@@ -89,8 +89,7 @@ module.exports.LedgerModel = require("./Masters/ledger.model");
 
 
 //Staffs
-
-
+module.exports.leaveManagerModel = require("./LeaveManager/leaveManager.model");
 
 
 

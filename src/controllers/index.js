@@ -125,3 +125,5 @@ module.exports.AdministrativeController = require("./Satffs/administrative/admin
 module.exports.employeeController = require("./Satffs/employee/employeee.controller");
 
 module.exports.SupportController = require("./Satffs/support/support.controller");
+
+module.exports.leaveManagerController = require('./LeaveManager/leaveManager.controller');
