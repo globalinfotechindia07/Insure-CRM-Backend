@@ -1,9 +1,8 @@
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const { ConsultantModel } = require("../models");
-const { EmployeeModel } = require("../models");
 const { AdminModel } = require("../models");
+const { EmployeeModel } = require("../models");
 const { CompanySetupModel } = require("../models");
 require("dotenv").config();
 const httpStatus = require("http-status");
@@ -13,10 +12,7 @@ const nodemailer = require("nodemailer");
 
 const {
   Administrative,
-  NursingAndParamedical,
-  MedicalOfficer,
   Support,
-  Consultant,
 } = require("../models");
 
 function validateEmail(email) {
@@ -167,7 +163,6 @@ const loginAdmin = async (req, res) => {
 //     if (admin) {
 //       const role = admin.role
 //       if (role === 'doctor') {
-//         const existingDoctor = await ConsultantModel.find({ _id: admin.refId })
 //         // const Admin = await AdminModel.findOne({ _id: existingDoctor[0].basicDetails.user.toString()  });
 //         const existingCompany = await CompanySetupModel.find({
 //           _id: existingDoctor[0].basicDetails.user.toString()
@@ -189,7 +184,6 @@ const loginAdmin = async (req, res) => {
 //           branchId: existingDoctor[0].basicDetails.user
 //         })
 //       } else if (role !== 'doctor' && role !== 'admin') {
-//         const existingEmployee = await EmployeeModel.find({ _id: admin.refId })
 //         const Admin = await AdminModel.findOne({
 //           refId: existingEmployee[0].basicDetails.user.toString()
 //         })

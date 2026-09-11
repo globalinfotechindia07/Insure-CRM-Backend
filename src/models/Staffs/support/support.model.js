@@ -7,7 +7,7 @@ const basicDetailsSchema = new mongoose.Schema({
   firstName: { type: String },
   middleName: { type: String },
   lastName: { type: String },
-  gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+  gender: { type: String, enum: ["Male", "Female", "Other", "MALE", "FEMALE", "OTHER"] },
   dateOfBirth: { type: Date },
   dateOfAnniversary: { type: Date },
   adharNumber: { type: String },
@@ -34,9 +34,9 @@ const basicDetailsSchema = new mongoose.Schema({
   permanentDistrict: { type: String },
   permanentState: { type: String },
 
-  emergencyContactPersonName: { type: String },
-  emergencyContactPersonMobileNumber: { type: String },
-  emergencyAddress: { type: String },
+   emergencyContactPersonName: { type: String },
+   emergencyContactPersonMobileNumber: { type: String },
+emergencyAddress: { type: String },
 
   minimumQualification: { type: String },
   diploma: { type: [String] },

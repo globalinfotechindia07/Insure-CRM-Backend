@@ -10,6 +10,7 @@ const EXCLUDED_KEYS = new Set([
   'jwt',
   'authorization',
   '_id',
+  'companyid',
   'image',
   'avatar',
   'file',
@@ -37,7 +38,9 @@ function convertToUppercase(data, keyName = '') {
       data.startsWith('data:image/') ||
       data.startsWith('data:application/') ||
       data.startsWith('http://') ||
-      data.startsWith('https://')
+      data.startsWith('https://') ||
+      data.toLowerCase() === 'true' ||
+      data.toLowerCase() === 'false'
     ) {
       return data;
     }

@@ -4,7 +4,6 @@ const {
   GovCompanyMasterModel,
   CoOperateCompanyMasterModel,
 } = require("../../models");
-const CoOperateCompanyMasterPrivateModel = require("../../models/Masters/co-operate_company_master_private");
 const httpStatus = require("http-status");
 
 // TPA Company

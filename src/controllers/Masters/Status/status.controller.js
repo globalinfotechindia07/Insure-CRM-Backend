@@ -8,10 +8,7 @@ const getStatusController = async (req, res) => {
       companyId: new mongoose.Types.ObjectId(companyId),
     });
     if (!statusname || statusname.length === 0) {
-      return res.status(404).json({
-        status: "false",
-        message: "No statusName found",
-      });
+      return res.status(200).json({ status: "true", data: [] });
     }
     // sort data from newest to oldest
     statusname.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

@@ -8,7 +8,7 @@ const basicDetailsSchema = new mongoose.Schema({
   firstName: { type: String }, // ✅
   middleName: { type: String }, // ✅
   lastName: { type: String }, // ✅
-  gender: { type: String, enum: ["Male", "Female", "Other"] }, // ✅
+  gender: { type: String, enum: ["Male", "Female", "Other", "MALE", "FEMALE", "OTHER"] }, // ✅
   dateOfBirth: { type: Date }, // ✅
   adharNumber: { type: String }, // ✅
   // panNumber: { type: String }, // ✅
@@ -39,12 +39,12 @@ const basicDetailsSchema = new mongoose.Schema({
   permanentDistrict: { type: String }, // ✅
   permanentState: { type: String }, // ✅
 
-  //? Emergency Contact Information
-  emergencyContacts: [
+//? Emergency Contact Information
+   emergencyContacts: [
     {
-      emergencyContactPersonName: { type: String }, // ✅
-      emergencyAddress: { type: String }, // ✅
-      emergencyContactPersonMobileNumber: { type: String }, // ✅
+       emergencyContactPersonName: { type: String }, // ✅
+emergencyAddress: { type: String }, // ✅
+       emergencyContactPersonMobileNumber: { type: String }, // ✅
     },
   ],
 
@@ -256,7 +256,7 @@ module.exports = Administrative;
 //   firstName: { type: String },
 //   middleName: { type: String },
 //   lastName: { type: String },
-//   gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
+//   gender: { type: String, enum: ["Male", "Female", "Other", "MALE", "FEMALE", "OTHER"], default: "Male" },
 //   dateOfBirth: { type: Date },
 //   adharNumber: { type: String },
 //   panNumber: { type: String },
@@ -286,11 +286,11 @@ module.exports = Administrative;
 //   permanentState: { type: String },
 
 //   // Emergency Contacts
-//   emergencyContacts: [
+ //   emergencyContacts: [
 //     {
-//       emergencyContactPersonName: { type: String },
+ //       emergencyContactPersonName: { type: String },
 //       emergencyAddress: { type: String },
-//       emergencyContactPersonMobileNumber: { type: String },
+ //       emergencyContactPersonMobileNumber: { type: String },
 //     },
 //   ],
 
