@@ -1,4 +1,5 @@
 const express = require("express");
+const { handleToken } = require("../utils/handleToken");
 
 // Superadmin & Admin
 const superAdminRouter = require("./superAdmin.route");
@@ -204,6 +205,30 @@ const defaultRoutes = [
   { path: "/company", route: companysRouter },
   { path: "/leaveManager", route: require("./LeaveManager/leaveManager.route") },
 ];
+const publicRoutes = [
+  "/superAdmin/login",
+  "/superAdmin/register",
+  "/admin/login",
+  "/admin/register",
+  "/admin/auth/send-otp",
+  "/admin/reset-password",
+  "/clientRegistration/login",
+  "/admin-clientRegistration/login",
+  "/administrative/staff-login"
+];
+
+// Global Authentication Middleware
+router.use((req, res, next) => {
+  // Check if the current path matches any of the public routes
+  const isPublic = publicRoutes.some(route => req.path.startsWith(route));
+  
+  if (isPublic) {
+    return next();
+  }
+  
+  // Otherwise, require a valid token
+  return handleToken(req, res, next);
+});
 
 defaultRoutes.forEach((route) => {
   router.use(route.path, route.route);
