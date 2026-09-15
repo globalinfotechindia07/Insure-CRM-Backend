@@ -1837,6 +1837,30 @@ const importCsv = async (req, res) => {
         if (clientType === "corporate") {
           if (groupMap[insuredNameKey]) {
             customerGroup = groupMap[insuredNameKey];
+            
+            // Sync existing customerGroup data if missing/different
+            try {
+              const existingGroup = await customerGroupModel.findById(customerGroup);
+              let groupUpdated = false;
+              if (existingGroup) {
+                if (email && !existingGroup.email) { existingGroup.email = email; groupUpdated = true; }
+                if (mobile && !existingGroup.mobile) { existingGroup.mobile = mobile; groupUpdated = true; }
+                if (gstNo && !existingGroup.gstNo) { existingGroup.gstNo = gstNo; groupUpdated = true; }
+                if (groupUpdated) await existingGroup.save();
+              }
+            } catch (e) {}
+
+            // Sync CustomerRegistrationModel for corporate
+            try {
+              let existingCustReg = await CustomerRegistrationModel.findOne({ customerGroupName: customerGroup, customerType: "corporate" });
+              if (existingCustReg) {
+                let custUpdated = false;
+                if (email && !existingCustReg.email) { existingCustReg.email = email; custUpdated = true; }
+                if (mobile && !existingCustReg.mobile) { existingCustReg.mobile = mobile; custUpdated = true; }
+                if (gstNo && !existingCustReg.gstNo) { existingCustReg.gstNo = gstNo; custUpdated = true; }
+                if (custUpdated) await existingCustReg.save();
+              }
+            } catch (e) {}
           } else {
             const newGroup = new customerGroupModel({
               companyId: cleanCompanyId,
@@ -1848,6 +1872,25 @@ const importCsv = async (req, res) => {
             const savedGroup = await newGroup.save();
             customerGroup = savedGroup._id;
             groupMap[insuredNameKey] = savedGroup._id;
+
+            // Also create CustomerRegistrationModel for corporate
+            try {
+              const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
+              let nextId = "CUST001";
+              if (lastCustomer && lastCustomer.customerId) {
+                const lastNum = parseInt(lastCustomer.customerId.replace("CUST", ""));
+                if (!isNaN(lastNum)) nextId = `CUST${String(lastNum + 1).padStart(3, "0")}`;
+              }
+              const newCustomerReg = new CustomerRegistrationModel({
+                customerType: "corporate", customerId: nextId, name: insuredName, email, mobile, gstNo: gstNo,
+                customerGroupName: savedGroup._id,
+                createdBy: mongoose.Types.ObjectId.isValid(cleanCompanyId) ? new mongoose.Types.ObjectId(cleanCompanyId) : undefined,
+              });
+              await newCustomerReg.save();
+            } catch (err) {
+              console.error("Error creating corporate CustomerRegistration:", err);
+            }
+
             try {
               const legacyCustomer = new Customer({
                 clientType: "corporate", customerId: "GRP" + Date.now(), customerName: insuredName, email, mobile, gst: gstNo
@@ -1858,6 +1901,18 @@ const importCsv = async (req, res) => {
         } else {
           if (customerMap[insuredNameKey]) {
             retailCustomer = customerMap[insuredNameKey];
+            
+            // Sync existing CustomerRegistrationModel for retail
+            try {
+              const existingCustReg = await CustomerRegistrationModel.findById(retailCustomer);
+              if (existingCustReg) {
+                let custUpdated = false;
+                if (email && !existingCustReg.email) { existingCustReg.email = email; custUpdated = true; }
+                if (mobile && !existingCustReg.mobile) { existingCustReg.mobile = mobile; custUpdated = true; }
+                if (gstNo && !existingCustReg.gstNo) { existingCustReg.gstNo = gstNo; custUpdated = true; }
+                if (custUpdated) await existingCustReg.save();
+              }
+            } catch (e) {}
           } else {
             const lastCustomer = await CustomerRegistrationModel.findOne().sort({ createdAt: -1 });
             let nextId = "CUST001";

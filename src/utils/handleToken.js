@@ -66,7 +66,7 @@ const generateToken = (user) => {
         role: user.role,
       },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "1y" }
+      { expiresIn: "24h" }
     );
 
     if (!token) {
