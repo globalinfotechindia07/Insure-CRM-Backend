@@ -214,7 +214,8 @@ const publicRoutes = [
   "/admin/reset-password",
   "/clientRegistration/login",
   "/admin-clientRegistration/login",
-  "/administrative/staff-login"
+  "/administrative/staff-login",
+  "/insCompany"
 ];
 
 // Global Authentication Middleware

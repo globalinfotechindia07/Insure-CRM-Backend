@@ -7,6 +7,13 @@ const routes = require("./routes");
 const path = require("path");
 const socketIO = require("socket.io");
 const http = require("http");
+
+// Ensure public/images directory exists
+const imagesDir = path.join(__dirname, "public", "images");
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true });
+}
+
 const { initilizeSocket } = require("./utils/socket");
 const uppercasePayloadMiddleware = require("./middleware/uppercasePayload.middleware");
 const alphabeticalMasterSortMiddleware = require("./middleware/alphabeticalMasterSort.middleware");

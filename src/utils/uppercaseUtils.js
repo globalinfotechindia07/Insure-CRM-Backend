@@ -1,4 +1,5 @@
 const EXCLUDED_KEYS = new Set([
+  'email',
   'password',
   'confirmpassword',
   'oldpassword',
@@ -21,7 +22,9 @@ const EXCLUDED_KEYS = new Set([
   'logo',
   'signature',
   'pdf',
-  'attachment'
+  'attachment',
+  'status',
+  'role'
 ]);
 
 function shouldExcludeKey(key) {
