@@ -1,4 +1,4 @@
-const checkDuplicateFields = async (model, data) => {
+const checkDuplicateFields = async (model, data, excludeId = null) => {
   try {
     const { contactNumber, email, adharNumber } = data
 
@@ -20,6 +20,10 @@ const checkDuplicateFields = async (model, data) => {
     // If no fields are provided, return null
     if (query.$or.length === 0) {
       return null
+    }
+
+    if (excludeId) {
+      query._id = { $ne: excludeId }
     }
 
     // Check for existing record
