@@ -248,6 +248,20 @@ const updateBasicDetails = async (req, res) => {
         : existingBasicDetails.basicDetails.profilePhoto,
     };
 
+    // Check for duplicates before updating
+    const errorMessage = await checkDuplicateFields(Administrative, {
+      contactNumber: basicDetails.contactNumber,
+      email: basicDetails.email,
+      adharNumber: basicDetails.adharNumber,
+    }, id);
+
+    if (errorMessage) {
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+      });
+    }
+
     // Defensive clean for bank fields
     basicDetails.bankAccountNumber = cleanBankField(
       basicDetails.bankAccountNumber
