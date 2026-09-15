@@ -5,11 +5,13 @@ const handleToken = (req, res, next) => {
   const token = req.header("Authorization");
 
   if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
+    console.error("Missing Authorization header in request to", req.method, req.originalUrl, req.headers);
+    return res.status(401).json({ error: "Unauthorized: Missing Authorization header" });
   }
 
   if (!token.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized" });
+    console.error("Authorization header does not start with Bearer in request to", req.method, req.originalUrl, token);
+    return res.status(401).json({ error: "Unauthorized: Invalid Authorization format" });
   }
 
   const bearerToken = token.slice(7);

@@ -2,7 +2,7 @@ const multer = require('multer');
 const path = require('path');
 
 const fs = require('fs');
-const imagesDir = 'public/images/';
+const imagesDir = path.join(__dirname, '..', 'public', 'images');
 if (!fs.existsSync(imagesDir)) {
   fs.mkdirSync(imagesDir, { recursive: true });
 }
@@ -10,7 +10,7 @@ if (!fs.existsSync(imagesDir)) {
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/images/'); // Make sure this folder exists
+    cb(null, imagesDir); // Make sure this folder exists
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
