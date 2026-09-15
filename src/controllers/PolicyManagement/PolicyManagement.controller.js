@@ -1993,6 +1993,13 @@ const importCsv = async (req, res) => {
       }
       if (gstRate !== undefined && (isNaN(gstRate) || gstRate < 0)) gstRate = 0;
 
+      if (gstRate > 0 && !gstAmount && netPremium > 0) {
+        gstAmount = Math.round((netPremium * gstRate) / 100 * 100) / 100; // Keep two decimals
+        if (!totalAmount || totalAmount === netPremium) {
+          totalAmount = netPremium + gstAmount;
+        }
+      }
+
       const resolveGstMaster = async (rate) => {
         let gDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(rate));
         if (!gDoc) {
