@@ -115,7 +115,7 @@ const claimSchema = new mongoose.Schema(
     // Type of settlement [Standard / Non-Standard / Repudiate]
     settlementType: {
       type: String,
-      enum: ["Standard", "Non-Standard", "Repudiate"],
+      enum: ["Standard", "Non-Standard", "Repudiate", "STANDARD", "NON-STANDARD", "REPUDIATE"],
       default: "Standard",
     },
 
