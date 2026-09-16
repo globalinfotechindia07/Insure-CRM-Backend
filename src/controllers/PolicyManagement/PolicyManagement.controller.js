@@ -2058,7 +2058,15 @@ const importCsv = async (req, res) => {
       const resolveGstMaster = async (rate) => {
         let gDoc = gstPercentages.find(g => Math.round(g.value) === Math.round(rate));
         if (!gDoc) {
-          let existing = await GstPercentageModel.findOne({ value: rate, isDeleted: false });
+          let existing = await GstPercentageModel.findOne({ 
+            value: rate, 
+            isDeleted: false,
+            $or: [
+              { companyId: cleanCompanyId },
+              { companyId: null },
+              { companyId: { $exists: false } }
+            ]
+          });
           if (!existing) {
             existing = new GstPercentageModel({
               companyId: cleanCompanyId,
