@@ -86,7 +86,7 @@ const getPolicyDetailByFY = async (req, res) => {
     // console.log("------------------------------------------", policyDetail);
 
     if (!policyDetail || policyDetail.length === 0) {
-      return res.status(404).json({ message: "policy detail not found" });
+      return res.status(200).json({ status: "true", data: [] });
     }
 
     // sort data from newest to oldest
@@ -243,11 +243,13 @@ const getPolicyDetail = async (req, res) => {
     }
 
     const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 10;
+    const limitNum = parseInt(limit, 10) || 10000000; // large default for IRDAI report
     const skipNum = (pageNum - 1) * limitNum;
 
     let policyDetail = [];
     let totalCount = 0;
+
+    console.log("🔍 IRDAI getPolicyDetail query:", JSON.stringify(query, null, 2));
 
     const baseQuery = policyDetailModel.find(query)
       .populate("insDepartment")
@@ -265,6 +267,8 @@ const getPolicyDetail = async (req, res) => {
       policyDetailModel.countDocuments(query),
       baseQuery.skip(skipNum).limit(limitNum)
     ]);
+
+    console.log(`📊 IRDAI query result: totalCount=${totalCount}, returned=${policyDetail.length}`);
 
     const seenIds = new Set();
     const uniquePolicies = [];
@@ -1054,7 +1058,22 @@ const updatePolicyDetail = async (req, res) => {
       return res.status(404).json({ message: "Policy not found" });
     }
     const companyId = existingPolicy.companyId || req.query.companyId;
-    
+
+    // ✅ Sanitize: convert empty strings "" to null for all ObjectId reference fields
+    // This prevents "Cast to ObjectId failed for value ''" BSONError
+    const objectIdFields = [
+      'financialYear', 'retailCustomer', 'customerGroup', 'subCustomerGroup',
+      'branchCode', 'prefix', 'insDepartment', 'insCompany', 'product',
+      'subProduct', 'brokerName', 'branchBroker', 'tpGst', 'odGst', 'gst',
+      'endorsementGst', 'riskCode', 'fuelType', 'incoterms', 'otherAddon',
+      'paymentMode', 'brokerageRate', 'pos', 'bqp'
+    ];
+    objectIdFields.forEach((field) => {
+      if (updateData[field] === '' || updateData[field] === undefined) {
+        updateData[field] = null;
+      }
+    });
+
     // Resolve/create customer if necessary
     const resolved = await ensureCustomerExists({
       clientType: updateData.clientType || existingPolicy.clientType,

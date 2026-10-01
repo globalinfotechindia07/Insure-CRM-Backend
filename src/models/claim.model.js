@@ -21,6 +21,12 @@ const claimSchema = new mongoose.Schema(
     },
 
     remarks: String,
+    
+    healthClaimType: {
+      type: String,
+      enum: ["REIMBURSEMENT", "CASHLESS", "PRE-POST", ""],
+      default: "",
+    },
 
     // =========================================
     // POLICY INTEGRATION (AUTO FILL)
@@ -34,44 +40,23 @@ const claimSchema = new mongoose.Schema(
     policyNo: String,
 
     insuredName: String,
+    
+    patientName: {
+      type: String,
+      trim: true,
+    },
 
     contactNo: String,
-
-    email: String,
-
-    contactPerson: String,
 
     policyDepartment: String,
 
     locationOfProperty: String,
 
-    renewalOrNewPolicy: String,
-
     typeOfPolicy: String,
-
-    wording: String,
-
-    additionalWordings: String,
-
-    financialInstitutionsAndLenders: String,
-
-    briefDescriptionOfProperty: String,
-
-    sumInsured: Number,
-
-    periodOfInsurance: String,
 
     insurerName: String,
 
     vehicleNumber: String,
-
-    netPremium: Number,
-
-    gst: Number,
-
-    totalAmount: Number,
-
-    paymentMode: String,
 
     // =========================================
     // CLAIM MAIN DETAILS (UPDATED)
@@ -89,6 +74,24 @@ const claimSchema = new mongoose.Schema(
       required: false,
     },
 
+    // Date of Registration
+    dateOfRegistration: {
+      type: Date,
+      required: false,
+    },
+
+    // Date of Intimation
+    dateOfIntimation: {
+      type: Date,
+      required: false,
+    },
+
+    // Loss Description
+    lossDescription: {
+      type: String,
+      trim: true,
+    },
+
     // Estimated loss Amount
     estimatedLossAmount: {
       type: Number,
@@ -99,40 +102,6 @@ const claimSchema = new mongoose.Schema(
     causeOfLoss: {
       type: String,
       trim: true,
-    },
-
-    // Claim Approved Amount
-    claimApprovedAmount: {
-      type: Number,
-      default: 0,
-    },
-
-    machineryDetails: {
-      type: String,
-      trim: true,
-    },
-
-    // Type of settlement [Standard / Non-Standard / Repudiate]
-    settlementType: {
-      type: String,
-      enum: ["Standard", "Non-Standard", "Repudiate", "STANDARD", "NON-STANDARD", "REPUDIATE"],
-      default: "Standard",
-    },
-
-    // =========================================
-    // IMPORTANT DATES (UPDATED)
-    // =========================================
-
-    // Date of Approval of claim
-    dateOfApprovalOfClaim: {
-      type: Date,
-      required: false,
-    },
-
-    // Date of settlement
-    dateOfSettlement: {
-      type: Date,
-      required: false,
     },
 
     // =========================================
@@ -161,6 +130,18 @@ const claimSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Surveyor Mob No
+    surveyorMobNo: {
+      type: String,
+      trim: true,
+    },
+
+    // Spot Survey Description
+    spotSurvey: {
+      type: String,
+      trim: true,
+    },
+
     // Name of the TPA
     tpaId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -172,85 +153,20 @@ const claimSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Name of the Investigator/Forensic Lab
-    investigatorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Investigator",
-    },
-
-    investigatorName: {
-      type: String,
-      trim: true,
-    },
-
     // =========================================
     // TRANSPORT / MARINE DETAILS (UPDATED)
     // =========================================
+
+    // Date of Invoice
+    dateOfInvoice: {
+      type: Date,
+      required: false,
+    },
 
     // Invoice No.
     invoiceNo: {
       type: String,
       trim: true,
-    },
-
-    // Bill of lading No.
-    billOfLadingNo: {
-      type: String,
-      trim: true,
-    },
-
-    // LR No.
-    lrNo: {
-      type: String,
-      trim: true,
-    },
-
-    // Insurance Certificate No.
-    insuranceCertificateNo: {
-      type: String,
-      trim: true,
-    },
-
-    // Journey/Voyage From
-    journeyFrom: {
-      type: String,
-      trim: true,
-    },
-
-    // Journey/Voyage To
-    journeyTo: {
-      type: String,
-      trim: true,
-    },
-
-    // Surveyor/Loss Adjuster Reference Number WKW
-    surveyorReferenceNumber: {
-      type: String,
-      trim: true,
-    },
-
-    // =========================================
-    // POST HOSPITALIZATION CLAIM (UPDATED)
-    // =========================================
-
-    postHospitalization: {
-      // Date of Discharge
-      dischargeDate: {
-        type: Date,
-        required: false,
-      },
-
-      // Amount Claimed
-      amountClaimed: {
-        type: Number,
-        default: 0,
-      },
-
-      // No of Days
-      noOfDays: {
-        type: Number,
-        default: 0,
-      },
     },
 
     // =========================================

@@ -1,7 +1,6 @@
 const Claim = require("../models/claim.model");
 const Surveyor = require("../models/surveyor.model");
 const TPA = require("../models/tpa.model");
-const Investigator = require("../models/investigator.model");
 const { policyDetailModel } = require("../models/index");
 
 // =========================================
@@ -19,8 +18,7 @@ const populateAll = (query) => {
     })
     .populate("preliminarySurveyorId")  // ✅ Preliminary Surveyor
     .populate("finalSurveyorId")        // ✅ Final Surveyor
-    .populate("tpaId")                  // ✅ TPA
-    .populate("investigatorId");        // ✅ Investigator
+    .populate("tpaId");                  // ✅ TPA
 };
 
 // =========================================
@@ -38,37 +36,24 @@ exports.createClaim = async (req, res) => {
         .populate("customerGroup");
 
       if (policy) {
-        let insuredName = policy.cutomerName || "";
-        if (!insuredName && policy.retailCustomer) {
-          insuredName = policy.retailCustomer.name;
+        let defaultInsuredName = policy.cutomerName || "";
+        if (!defaultInsuredName && policy.retailCustomer) {
+          defaultInsuredName = policy.retailCustomer.name;
         }
-        if (!insuredName && policy.customerGroup) {
-          insuredName = policy.customerGroup.groupName || policy.customerGroup.name;
+        if (!defaultInsuredName && policy.customerGroup) {
+          defaultInsuredName = policy.customerGroup.groupName || policy.customerGroup.name;
         }
 
         payload = {
           ...payload,
-          policyNo: policy.policyNumber || "",
-          insuredName: insuredName,
-          contactNo: policy.mobile || "",
-          email: policy.email || "",
-          contactPerson: policy.cutomerName || "",
-          policyDepartment: policy.insDepartment ? policy.insDepartment.insDepartment : "",
-          locationOfProperty: policy.siteLocation || "",
-          renewalOrNewPolicy: policy.renewable || "",
-          typeOfPolicy: policy.policyType || "",
-          wording: policy.marineClause || "",
-          additionalWordings: "",
-          financialInstitutionsAndLenders: "",
-          briefDescriptionOfProperty: policy.propertyDescription || "",
-          sumInsured: policy.sumInsured || 0,
-          periodOfInsurance: policy.policyDuration || "",
-          insurerName: policy.insurerName || "",
-          vehicleNumber: policy.vehicleNumber || "",
-          netPremium: policy.netPremium || 0,
-          gst: 0,
-          totalAmount: policy.totalAmount || 0,
-          paymentMode: policy.paymentMode || "",
+          policyNo: payload.policyNo || policy.policyNumber || "",
+          insuredName: payload.insuredName || defaultInsuredName,
+          contactNo: payload.contactNo || policy.mobile || "",
+          policyDepartment: payload.policyDepartment || (policy.insDepartment ? policy.insDepartment.insDepartment : ""),
+          locationOfProperty: payload.locationOfProperty || policy.siteLocation || "",
+          typeOfPolicy: payload.typeOfPolicy || (policy.insDepartment ? policy.insDepartment.insDepartment : (policy.policyType || "")),
+          insurerName: payload.insurerName || policy.insurerName || "",
+          vehicleNumber: payload.vehicleNumber || policy.vehicleNumber || "",
         };
       }
     }
@@ -87,11 +72,6 @@ exports.createClaim = async (req, res) => {
     if (payload.tpaId) {
       const tpa = await TPA.findById(payload.tpaId);
       if (tpa) payload.tpaName = tpa.tpaName;
-    }
-
-    if (payload.investigatorId) {
-      const investigator = await Investigator.findById(payload.investigatorId);
-      if (investigator) payload.investigatorName = investigator.investigatorName;
     }
 
     const data = await Claim.create(payload);
@@ -188,11 +168,6 @@ exports.updateClaim = async (req, res) => {
       if (tpa) payload.tpaName = tpa.tpaName;
     }
 
-    if (payload.investigatorId) {
-      const investigator = await Investigator.findById(payload.investigatorId);
-      if (investigator) payload.investigatorName = investigator.investigatorName;
-    }
-
     const data = await populateAll(
       Claim.findByIdAndUpdate(
         req.params.id,
@@ -231,7 +206,6 @@ exports.assignClaim = async (req, res) => {
       preliminarySurveyorId: req.body.preliminarySurveyorId,
       finalSurveyorId: req.body.finalSurveyorId,
       tpaId: req.body.tpaId,
-      investigatorId: req.body.investigatorId,
     };
 
     // Auto-fill names
@@ -248,11 +222,6 @@ exports.assignClaim = async (req, res) => {
     if (req.body.tpaId) {
       const tpa = await TPA.findById(req.body.tpaId);
       if (tpa) updateFields.tpaName = tpa.tpaName;
-    }
-
-    if (req.body.investigatorId) {
-      const investigator = await Investigator.findById(req.body.investigatorId);
-      if (investigator) updateFields.investigatorName = investigator.investigatorName;
     }
 
     const data = await populateAll(
@@ -415,6 +384,7 @@ exports.updateLossDetails = async (req, res) => {
 exports.updateTransportDetails = async (req, res) => {
   try {
     const updateFields = {
+      dateOfInvoice: req.body.dateOfInvoice,
       invoiceNo: req.body.invoiceNo,
       billOfLadingNo: req.body.billOfLadingNo,
       lrNo: req.body.lrNo,
