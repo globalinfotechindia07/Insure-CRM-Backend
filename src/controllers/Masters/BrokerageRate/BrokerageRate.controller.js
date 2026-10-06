@@ -16,7 +16,7 @@ const getBrokerageRateController = async (req, res) => {
         { companyId: { $exists: false } }
       ];
     }
-    let brokerageRates = await brokerageRateModel.find(query).sort({ createdAt: -1 });
+    let brokerageRates = await brokerageRateModel.find(query).sort({ brokerageRate: 1 });
     if (!brokerageRates || brokerageRates.length === 0) {
       const defaultRates = [0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25];
       const createdDocs = [];
