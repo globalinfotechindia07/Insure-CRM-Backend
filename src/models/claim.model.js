@@ -175,10 +175,51 @@ const claimSchema = new mongoose.Schema(
 
     claimAmount: Number,
     approvedAmount: Number,
+    totalAmountDeducted: Number,
     admissionDate: Date,
     dischargeDate: Date,
     approvalDate: Date,
     settlementDate: Date,
+
+    // Investigator
+    investigatorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Investigator",
+    },
+    investigatorName: String,
+
+    typeOfSurvey: {
+      type: String,
+      enum: ["Spot", "Preliminary", "Final", "SPOT", "PRELIMINARY", "FINAL", ""],
+      default: "",
+    },
+
+    // Marine Fields
+    billOfLadingNo: String,
+    portOfLoading: String,
+    portOfDischarge: String,
+    descriptionOfGoods: String,
+    voyageFrom: String,
+    voyageTo: String,
+    typeOfCargo: String,
+    nameOfVessel: String,
+    typeOfLoss: String,
+
+    // Motor Fields
+    nameOfDriver: String,
+
+    // Engineering Fields
+    assetMachineryId: String,
+
+    // Health Fields
+    relationshipToPolicyholder: String,
+    hospitalNameAndAddress: String,
+
+    periodOfInsurance: String,
+    sumInsured: String,
+    surveyorEmail: String,
+    investigatorContactNo: String,
+    investigatorEmail: String,
 
     // =========================================
     // ACTIVE STATUS

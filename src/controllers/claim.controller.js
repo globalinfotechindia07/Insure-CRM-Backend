@@ -1,6 +1,7 @@
 const Claim = require("../models/claim.model");
 const Surveyor = require("../models/surveyor.model");
 const TPA = require("../models/tpa.model");
+const Investigator = require("../models/investigator.model");
 const { policyDetailModel } = require("../models/index");
 
 // =========================================
@@ -18,7 +19,8 @@ const populateAll = (query) => {
     })
     .populate("preliminarySurveyorId")  // ✅ Preliminary Surveyor
     .populate("finalSurveyorId")        // ✅ Final Surveyor
-    .populate("tpaId");                  // ✅ TPA
+    .populate("tpaId")                  // ✅ TPA
+    .populate("investigatorId");        // ✅ Investigator
 };
 
 // =========================================
@@ -74,6 +76,11 @@ exports.createClaim = async (req, res) => {
       if (tpa) payload.tpaName = tpa.tpaName;
     }
 
+    if (payload.investigatorId) {
+      const investigator = await Investigator.findById(payload.investigatorId);
+      if (investigator) payload.investigatorName = investigator.investigatorName;
+    }
+
     const data = await Claim.create(payload);
 
     const populatedData = await populateAll(
@@ -87,6 +94,7 @@ exports.createClaim = async (req, res) => {
     });
 
   } catch (error) {
+    require('fs').appendFileSync('c:\\GII Projects\\Insure CRM\\Insure-CRM-Backend\\error.log', error.stack + '\n');
     res.status(500).json({
       success: false,
       message: error.message,
@@ -168,6 +176,11 @@ exports.updateClaim = async (req, res) => {
       if (tpa) payload.tpaName = tpa.tpaName;
     }
 
+    if (payload.investigatorId) {
+      const investigator = await Investigator.findById(payload.investigatorId);
+      if (investigator) payload.investigatorName = investigator.investigatorName;
+    }
+
     const data = await populateAll(
       Claim.findByIdAndUpdate(
         req.params.id,
@@ -206,6 +219,7 @@ exports.assignClaim = async (req, res) => {
       preliminarySurveyorId: req.body.preliminarySurveyorId,
       finalSurveyorId: req.body.finalSurveyorId,
       tpaId: req.body.tpaId,
+      investigatorId: req.body.investigatorId,
     };
 
     // Auto-fill names
@@ -222,6 +236,11 @@ exports.assignClaim = async (req, res) => {
     if (req.body.tpaId) {
       const tpa = await TPA.findById(req.body.tpaId);
       if (tpa) updateFields.tpaName = tpa.tpaName;
+    }
+
+    if (req.body.investigatorId) {
+      const investigator = await Investigator.findById(req.body.investigatorId);
+      if (investigator) updateFields.investigatorName = investigator.investigatorName;
     }
 
     const data = await populateAll(

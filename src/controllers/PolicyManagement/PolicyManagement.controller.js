@@ -255,13 +255,19 @@ const getPolicyDetail = async (req, res) => {
       .populate("insDepartment")
       .populate("insCompany")
       .populate("retailCustomer")
-      .populate("customerGroup")
-      .populate("gst")
-      .populate("tpGst")
-      .populate("odGst")
-      .populate("endorsementGst")
-      .sort({ createdAt: -1 })
-      .lean();
+      .populate("customerGroup");
+      
+    if (req.query.isIrdai === 'true') {
+      baseQuery.select("financialYear startDate tpStartDate odStartDate endorStartDate transactionDate insDepartment totalAmount totalBrokerageAmountincGst cutomerName retailCustomer customerGroup insurerName");
+    } else if (req.query.isParametric === 'true') {
+      baseQuery.select("cutomerName retailCustomer customerGroup email mobile policyNumber startDate endDate netPremium totalAmount vehicleNumber insDepartment insCompany gstAmount totalBrokerageGst totalBrokerageAmountincGst financialYear pos bqp");
+    } else {
+      baseQuery.populate("gst")
+               .populate("tpGst")
+               .populate("odGst")
+               .populate("endorsementGst");
+    }
+    baseQuery.sort({ createdAt: -1 }).lean();
 
     [totalCount, policyDetail] = await Promise.all([
       policyDetailModel.countDocuments(query),
