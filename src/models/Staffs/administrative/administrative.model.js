@@ -14,6 +14,7 @@ const basicDetailsSchema = new mongoose.Schema({
   // panNumber: { type: String }, // ✅
   pfNumber: { type: String },
   esicNumber: { type: String },
+  uanNumber: { type: String },
   profilePhoto: { type: String }, // ✅
   isMarried: { type: Boolean, default: false },
   spouseName: { type: String }, // ✅

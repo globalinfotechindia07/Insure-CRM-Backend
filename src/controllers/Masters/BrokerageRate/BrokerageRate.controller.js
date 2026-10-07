@@ -67,6 +67,36 @@ const postBrokerageRateController = async (req, res) => {
       companyId: new mongoose.Types.ObjectId(companyId),
     });
     await newbrokerageRate.save();
+    
+    // Automatically link unlinked policies to this new rate
+    try {
+      const numRate = Number(brokerageRate);
+      const newId = newbrokerageRate._id;
+      const { policyDetailsModel } = require("../../../models/index");
+
+      if (policyDetailsModel) {
+        await policyDetailsModel.updateMany(
+          { unlinkedTpBrokerageRate: numRate },
+          { $set: { tpBrokerageRate: newId }, $unset: { unlinkedTpBrokerageRate: 1 } }
+        );
+        await policyDetailsModel.updateMany(
+          { unlinkedOdBrokerageRate: numRate },
+          { $set: { odBrokerageRate: newId }, $unset: { unlinkedOdBrokerageRate: 1 } }
+        );
+        await policyDetailsModel.updateMany(
+          { unlinkedRateOnTerr: numRate },
+          { $set: { rateOnTerr: newId }, $unset: { unlinkedRateOnTerr: 1 } }
+        );
+        await policyDetailsModel.updateMany(
+          { unlinkedRateOnOtherTerr: numRate },
+          { $set: { rateOnOtherTerr: newId }, $unset: { unlinkedRateOnOtherTerr: 1 } }
+        );
+        console.log(`Successfully linked unlinked policies for brokerage rate: ${numRate}`);
+      }
+    } catch (linkErr) {
+      console.error('Error linking unlinked brokerage rates:', linkErr);
+    }
+
     res.status(201).json({ status: "true", data: newbrokerageRate });
   } catch (error) {
     console.log(error);

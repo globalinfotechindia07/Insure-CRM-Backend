@@ -151,6 +151,17 @@ server.listen(process.env.port, async () => {
     await connection;
 
     console.log("✅ Connected to Mongo Atlas");
+    
+    try {
+      const mongoose = require('mongoose');
+      await mongoose.connection.collection('departments').dropIndex('name_1');
+      console.log('✅ Index name_1 on departments dropped successfully!');
+    } catch (err) {
+      if (err.codeName !== 'IndexNotFound') {
+        console.error('❌ Error dropping index:', err.message);
+      }
+    }
+
     console.log(`🚀 Server running on Port ${process.env.port}`);
   } catch (err) {
     console.log("❌ MongoDB Connection Error:", err.message);

@@ -2273,19 +2273,19 @@ const importCsv = async (req, res) => {
       };
 
       const rawTpRate = getValueByPossibleKeys(row, "TP BROKERAGE RATE", "TP BROKERAGE %", "TP COMMISSION %", "TP BROKERAGE RATE (%)");
-      const tpBrokerageRateId = await resolveBrokerageRate(rawTpRate);
+      const tpBrokerageRateObj = await resolveBrokerageRate(rawTpRate);
       const tpRateNum = parseNumericRate(rawTpRate);
 
       const rawOdRate = getValueByPossibleKeys(row, "OD BROKERAGE RATE", "OD BROKERAGE %", "OD COMMISSION %", "BROKERAGE RATE", "BROKERAGE %", "COMMISSION %", "OD BROKERAGE RATE (%)");
-      const odBrokerageRateId = await resolveBrokerageRate(rawOdRate);
+      const odBrokerageRateObj = await resolveBrokerageRate(rawOdRate);
       const odRateNum = parseNumericRate(rawOdRate);
 
       const rawTerrRate = getValueByPossibleKeys(row, "RATE ON TERRORISM", "RATE ON TERROR", "TERRORISM RATE", "TERROR RATE", "TERRORISM BROKERAGE RATE", "RATE ON TERRORISM (%)", "RATE ON TERROR (%)", "TERRORISM BROKERAGE RATE (%)", "RATE_ON_TERRORISM", "RATE_ON_TERROR");
-      const rateOnTerrId = await resolveBrokerageRate(rawTerrRate);
+      const rateOnTerrObj = await resolveBrokerageRate(rawTerrRate);
       const terrRateNum = parseNumericRate(rawTerrRate);
 
       const rawOtherTerrRate = getValueByPossibleKeys(row, "RATE ON OTHER TERRORISM", "RATE ON OTHER TERROR", "OTHER TERRORISM RATE", "OTHER TERROR RATE", "OTHER TERRORISM BROKERAGE RATE", "RATE ON OTHER TERRORISM (%)", "RATE ON OTHER TERROR (%)", "OTHER TERRORISM BROKERAGE RATE (%)", "RATE_ON_OTHER_TERRORISM", "RATE_ON_OTHER_TERROR");
-      const rateOnOtherTerrId = await resolveBrokerageRate(rawOtherTerrRate);
+      const rateOnOtherTerrObj = await resolveBrokerageRate(rawOtherTerrRate);
       const otherTerrRateNum = parseNumericRate(rawOtherTerrRate);
 
       const rawEndorGst = getValueByPossibleKeys(row, "ENDORSEMENT GST", "ENDORSEMENT GST %", "ENDORSEMENT GST RATE");
@@ -2483,10 +2483,14 @@ const importCsv = async (req, res) => {
         SGST,
         IGST,
         UGST,
-        tpBrokerageRate: tpBrokerageRateId,
-        odBrokerageRate: odBrokerageRateId,
-        rateOnTerr: rateOnTerrId,
-        rateOnOtherTerr: rateOnOtherTerrId,
+        tpBrokerageRate: tpBrokerageRateObj?.id,
+        unlinkedTpBrokerageRate: tpBrokerageRateObj?.id ? undefined : tpBrokerageRateObj?.raw,
+        odBrokerageRate: odBrokerageRateObj?.id,
+        unlinkedOdBrokerageRate: odBrokerageRateObj?.id ? undefined : odBrokerageRateObj?.raw,
+        rateOnTerr: rateOnTerrObj?.id,
+        unlinkedRateOnTerr: rateOnTerrObj?.id ? undefined : rateOnTerrObj?.raw,
+        rateOnOtherTerr: rateOnOtherTerrObj?.id,
+        unlinkedRateOnOtherTerr: rateOnOtherTerrObj?.id ? undefined : rateOnOtherTerrObj?.raw,
         endorsementGst: endorsementGstId,
         sharePercentage,
         coBrokerageAmount,
