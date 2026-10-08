@@ -1072,7 +1072,7 @@ const updatePolicyDetail = async (req, res) => {
       'branchCode', 'prefix', 'insDepartment', 'insCompany', 'product',
       'subProduct', 'brokerName', 'branchBroker', 'tpGst', 'odGst', 'gst',
       'endorsementGst', 'riskCode', 'fuelType', 'incoterms', 'otherAddon',
-      'paymentMode', 'brokerageRate', 'pos', 'bqp'
+      'paymentMode', 'brokerageRate', 'pos', 'bqp', 'tpBrokerageRate', 'odBrokerageRate', 'rateOnTerr', 'rateOnOtherTerr'
     ];
     objectIdFields.forEach((field) => {
       if (updateData[field] === '' || updateData[field] === undefined) {
@@ -2483,14 +2483,14 @@ const importCsv = async (req, res) => {
         SGST,
         IGST,
         UGST,
-        tpBrokerageRate: tpBrokerageRateObj?.id,
-        unlinkedTpBrokerageRate: tpBrokerageRateObj?.id ? undefined : tpBrokerageRateObj?.raw,
-        odBrokerageRate: odBrokerageRateObj?.id,
-        unlinkedOdBrokerageRate: odBrokerageRateObj?.id ? undefined : odBrokerageRateObj?.raw,
-        rateOnTerr: rateOnTerrObj?.id,
-        unlinkedRateOnTerr: rateOnTerrObj?.id ? undefined : rateOnTerrObj?.raw,
-        rateOnOtherTerr: rateOnOtherTerrObj?.id,
-        unlinkedRateOnOtherTerr: rateOnOtherTerrObj?.id ? undefined : rateOnOtherTerrObj?.raw,
+        tpBrokerageRate: tpBrokerageRateObj?._id,
+        unlinkedTpBrokerageRate: tpBrokerageRateObj?._id ? undefined : tpBrokerageRateObj?.raw,
+        odBrokerageRate: odBrokerageRateObj?._id,
+        unlinkedOdBrokerageRate: odBrokerageRateObj?._id ? undefined : odBrokerageRateObj?.raw,
+        rateOnTerr: rateOnTerrObj?._id,
+        unlinkedRateOnTerr: rateOnTerrObj?._id ? undefined : rateOnTerrObj?.raw,
+        rateOnOtherTerr: rateOnOtherTerrObj?._id,
+        unlinkedRateOnOtherTerr: rateOnOtherTerrObj?._id ? undefined : rateOnOtherTerrObj?.raw,
         endorsementGst: endorsementGstId,
         sharePercentage,
         coBrokerageAmount,
