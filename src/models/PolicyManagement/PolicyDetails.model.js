@@ -397,10 +397,7 @@ const policyDetailSchema = new mongoose.Schema(
       type: Number,
       set: parseNumber,
     },
-    totalBrokerageAmountincGst: {
-      type: Number,
-      set: parseNumber,
-    },
+    totalBrokerageAmountincGst: { type: Number, set: parseNumber, }, unlinkedTpBrokerageRate: { type: Number }, unlinkedOdBrokerageRate: { type: Number }, unlinkedRateOnTerr: { type: Number }, unlinkedRateOnOtherTerr: { type: Number },
     sharePercentage: {
       type: Number,
       set: parseNumber,
@@ -462,3 +459,4 @@ policyDetailSchema.index(
 const policyDetailModel = mongoose.model("policyDetail", policyDetailSchema);
 
 module.exports = policyDetailModel;
+

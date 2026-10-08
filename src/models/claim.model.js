@@ -214,6 +214,9 @@ const claimSchema = new mongoose.Schema(
     // Health Fields
     relationshipToPolicyholder: String,
     hospitalNameAndAddress: String,
+    admissionTime: String,
+    tpaContactNo: String,
+    tpaEmail: String,
 
     periodOfInsurance: String,
     sumInsured: String,

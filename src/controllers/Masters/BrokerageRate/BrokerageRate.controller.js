@@ -17,21 +17,9 @@ const getBrokerageRateController = async (req, res) => {
       ];
     }
     let brokerageRates = await brokerageRateModel.find(query).sort({ brokerageRate: 1 });
-    if (!brokerageRates || brokerageRates.length === 0) {
-      const defaultRates = [0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25];
-      const createdDocs = [];
-      for (const rate of defaultRates) {
-        try {
-          const doc = await brokerageRateModel.create({
-            brokerageRate: rate,
-            companyId: (companyId && mongoose.Types.ObjectId.isValid(companyId)) ? companyId : null
-          });
-          createdDocs.push(doc);
-        } catch (e) {
-          // ignore duplicate key errors if concurrent
-        }
-      }
-      brokerageRates = await brokerageRateModel.find({}).sort({ brokerageRate: 1 });
+    // Auto-seed logic removed: user wants to be able to delete everything and keep it empty
+    if (!brokerageRates) {
+      brokerageRates = [];
     }
     res.status(200).json({ status: "true", data: brokerageRates || [] });
   } catch (error) {
@@ -75,22 +63,47 @@ const postBrokerageRateController = async (req, res) => {
       const { policyDetailsModel } = require("../../../models/index");
 
       if (policyDetailsModel) {
-        await policyDetailsModel.updateMany(
-          { unlinkedTpBrokerageRate: numRate },
-          { $set: { tpBrokerageRate: newId }, $unset: { unlinkedTpBrokerageRate: 1 } }
-        );
-        await policyDetailsModel.updateMany(
-          { unlinkedOdBrokerageRate: numRate },
-          { $set: { odBrokerageRate: newId }, $unset: { unlinkedOdBrokerageRate: 1 } }
-        );
-        await policyDetailsModel.updateMany(
-          { unlinkedRateOnTerr: numRate },
-          { $set: { rateOnTerr: newId }, $unset: { unlinkedRateOnTerr: 1 } }
-        );
-        await policyDetailsModel.updateMany(
-          { unlinkedRateOnOtherTerr: numRate },
-          { $set: { rateOnOtherTerr: newId }, $unset: { unlinkedRateOnOtherTerr: 1 } }
-        );
+        const queryObj = { $or: [ { unlinkedTpBrokerageRate: numRate }, { unlinkedOdBrokerageRate: numRate }, { unlinkedRateOnTerr: numRate }, { unlinkedRateOnOtherTerr: numRate } ] }; if (companyId) { queryObj.insCompany = new mongoose.Types.ObjectId(companyId); } const policiesToUpdate = await policyDetailsModel.find(queryObj); /*
+            { unlinkedTpBrokerageRate: numRate },
+            { unlinkedOdBrokerageRate: numRate },
+            { unlinkedRateOnTerr: numRate },
+            { unlinkedRateOnOtherTerr: numRate }
+ */ for (const policy of policiesToUpdate) {
+          let updated = false;
+
+          if (policy.unlinkedTpBrokerageRate === numRate) {
+            policy.tpBrokerageRate = newId;
+            policy.unlinkedTpBrokerageRate = undefined;
+            if (policy.tpPremium && !isNaN(policy.tpPremium)) {
+              policy.tpBrokerageAmount = Math.round(((policy.tpPremium * numRate) / 100) * 100) / 100;
+            }
+            updated = true;
+          }
+
+          if (policy.unlinkedOdBrokerageRate === numRate) {
+            policy.odBrokerageRate = newId;
+            policy.unlinkedOdBrokerageRate = undefined;
+            const basePremium = policy.odPremium || policy.netPremium || 0;
+            if (basePremium && !isNaN(basePremium)) {
+              policy.odBrokerageAmount = Math.round(((basePremium * numRate) / 100) * 100) / 100;
+            }
+            updated = true;
+          }
+
+          if (policy.unlinkedRateOnTerr === numRate) {
+            policy.rateOnTerr = newId;
+            policy.unlinkedRateOnTerr = undefined;
+            updated = true;
+          }
+
+          if (policy.unlinkedRateOnOtherTerr === numRate) {
+            policy.rateOnOtherTerr = newId;
+            policy.unlinkedRateOnOtherTerr = undefined;
+            updated = true;
+          }
+
+          if (updated) { const tot = (policy.odBrokerageAmount || 0) + (policy.tpBrokerageAmount || 0); policy.totalBrokerageAmount = tot; const gstInc = policy.totalBrokerageGst || 18; policy.totalBrokerageAmountincGst = Math.round((tot * (1 + (gstInc / 100))) * 100) / 100; const updateQuery = { $set: {}, $unset: {} }; if (policy.tpBrokerageRate) updateQuery.$set.tpBrokerageRate = policy.tpBrokerageRate; if (policy.odBrokerageRate) updateQuery.$set.odBrokerageRate = policy.odBrokerageRate; if (policy.rateOnTerr) updateQuery.$set.rateOnTerr = policy.rateOnTerr; if (policy.rateOnOtherTerr) updateQuery.$set.rateOnOtherTerr = policy.rateOnOtherTerr; if (policy.tpBrokerageAmount !== undefined) updateQuery.$set.tpBrokerageAmount = policy.tpBrokerageAmount; if (policy.odBrokerageAmount !== undefined) updateQuery.$set.odBrokerageAmount = policy.odBrokerageAmount; updateQuery.$set.totalBrokerageAmount = policy.totalBrokerageAmount; updateQuery.$set.totalBrokerageAmountincGst = policy.totalBrokerageAmountincGst; if (policy.unlinkedTpBrokerageRate === undefined) updateQuery.$unset.unlinkedTpBrokerageRate = 1; if (policy.unlinkedOdBrokerageRate === undefined) updateQuery.$unset.unlinkedOdBrokerageRate = 1; if (policy.unlinkedRateOnTerr === undefined) updateQuery.$unset.unlinkedRateOnTerr = 1; if (policy.unlinkedRateOnOtherTerr === undefined) updateQuery.$unset.unlinkedRateOnOtherTerr = 1; if (Object.keys(updateQuery.$unset).length === 0) delete updateQuery.$unset; await policyDetailsModel.updateOne({ _id: policy._id }, updateQuery); }
+        }
         console.log(`Successfully linked unlinked policies for brokerage rate: ${numRate}`);
       }
     } catch (linkErr) {
@@ -161,3 +174,6 @@ module.exports = {
   putBrokerageRateController,
   deleteBrokerageRateController,
 };
+
+
+

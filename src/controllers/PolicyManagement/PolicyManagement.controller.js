@@ -597,11 +597,7 @@ const ensureMastersExist = async (body, companyId) => {
     }
     if (isNaN(num) || num <= 0) return undefined;
     try {
-      let doc = await brokerageRateModel.findOne({ brokerageRate: num });
-      if (!doc) {
-        doc = await brokerageRateModel.create({ brokerageRate: num, companyId: cleanCompanyId });
-      }
-      return doc._id;
+      let doc = await brokerageRateModel.findOne({ brokerageRate: num }); if (!doc) { return undefined; } return doc._id;
     } catch (brErr) {
       console.error("Error resolving brokerage rate in ensureMastersExist:", brErr);
       return undefined;
@@ -1331,24 +1327,8 @@ const importCsv = async (req, res) => {
       let found = brokerageRatesList.find(b => Number(b.brokerageRate) === numRate);
       if (!found) {
         try {
-          let existing = await brokerageRateModel.findOne({
-            brokerageRate: numRate
-          });
-          if (!existing) {
-            existing = new brokerageRateModel({
-              brokerageRate: numRate,
-              companyId: cleanCompanyId
-            });
-            await existing.save();
-          }
-          brokerageRatesList.push(existing);
-          found = existing;
-        } catch (bErr) {
-          console.error("Error creating brokerage rate during import:", bErr);
-        }
-      }
-      return found?._id;
-    };
+          let existing = await brokerageRateModel.findOne({ companyId: cleanCompanyId, brokerageRate: numRate });
+          if (!existing) { return { raw: numRate }; } brokerageRatesList.push(existing); found = existing; } catch (bErr) { console.error("Error creating brokerage rate during import:", bErr); } } return found ? { _id: found._id } : null; };
 
     // 🏢 Dynamic Department Resolver & Cache
     const deptCache = new Map();
@@ -2929,3 +2909,8 @@ module.exports = {
   exportCsv,
   sendReminder,
 };
+
+
+
+
+
