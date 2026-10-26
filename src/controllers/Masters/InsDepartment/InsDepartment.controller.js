@@ -26,7 +26,10 @@ const getInsDepartmentController = async (req, res) => {
        }
      }
 
-     const insDepartments = await insDepartmentModel.find(query);
+     let insDepartments = await insDepartmentModel.find(query);
+     if (!insDepartments || insDepartments.length === 0) {
+       insDepartments = await insDepartmentModel.find({});
+     }
      if (!insDepartments || insDepartments.length === 0) {
        return res.status(200).json({ status: "true", data: [] });
      }

@@ -2523,7 +2523,7 @@ const importCsv = async (req, res) => {
   }
 };
 const exportCsv = async (req, res) => {
-  const { companyId } = req.query;
+  const { companyId, financialYear, company, department, month, search } = req.query;
 
   try {
     const query = {};
@@ -2533,6 +2533,71 @@ const exportCsv = async (req, res) => {
         { companyId: null },
         { companyId: { $exists: false } }
       ];
+    }
+
+    if (financialYear && mongoose.Types.ObjectId.isValid(financialYear)) {
+      query.financialYear = new mongoose.Types.ObjectId(financialYear);
+    }
+    if (company && mongoose.Types.ObjectId.isValid(company)) {
+      query.insCompany = new mongoose.Types.ObjectId(company);
+    }
+    if (department && mongoose.Types.ObjectId.isValid(department)) {
+      query.insDepartment = new mongoose.Types.ObjectId(department);
+    }
+
+    if (month) {
+      const [yearStr, monthStr] = month.split("-");
+      if (yearStr && monthStr) {
+        const startDate = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+        const endDate = new Date(parseInt(yearStr), parseInt(monthStr), 1);
+        
+        const monthOr = [
+          { startDate: { $gte: startDate, $lt: endDate } },
+          { tpStartDate: { $gte: startDate, $lt: endDate } },
+          { odStartDate: { $gte: startDate, $lt: endDate } },
+          { endorStartDate: { $gte: startDate, $lt: endDate } },
+          { transactionDate: { $gte: startDate, $lt: endDate } }
+        ];
+
+        if (query.$or) {
+          query.$and = [{ $or: query.$or }, { $or: monthOr }];
+          delete query.$or;
+        } else {
+          query.$or = monthOr;
+        }
+      }
+    }
+
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      
+      const [matchingCompanies, matchingDepts, matchingRetail, matchingGroups] = await Promise.all([
+        insCompanyModel.find({ $or: [{ insCompany: searchRegex }, { name: searchRegex }, { companyName: searchRegex }] }).select('_id'),
+        insDepartmentModel.find({ insDepartment: searchRegex }).select('_id'),
+        CustomerRegistrationModel.find({ name: searchRegex }).select('_id'),
+        customerGroupModel.find({ customerGroupName: searchRegex }).select('_id')
+      ]);
+
+      const searchOr = [
+        { policyNumber: searchRegex },
+        { cutomerName: searchRegex },
+        { insurerName: searchRegex }
+      ];
+
+      if (matchingCompanies.length > 0) searchOr.push({ insCompany: { $in: matchingCompanies.map(c => c._id) } });
+      if (matchingDepts.length > 0) searchOr.push({ insDepartment: { $in: matchingDepts.map(d => d._id) } });
+      if (matchingRetail.length > 0) searchOr.push({ retailCustomer: { $in: matchingRetail.map(r => r._id) } });
+      if (matchingGroups.length > 0) searchOr.push({ customerGroup: { $in: matchingGroups.map(g => g._id) } });
+
+      if (query.$or) {
+        if (!query.$and) query.$and = [{ $or: query.$or }];
+        query.$and.push({ $or: searchOr });
+        delete query.$or;
+      } else if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
     }
 
     const policyData = await policyDetailModel

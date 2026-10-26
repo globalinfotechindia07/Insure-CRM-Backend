@@ -4,13 +4,33 @@ const { financialYearModel } = require("../../../models/index");
 const getFinancialYearController = async (req, res) => {
   try {
     const { companyId } = req.query;
-    const financialYears = await financialYearModel.find({
-      companyId: new mongoose.Types.ObjectId(companyId),
-    });
+    let query = {};
+    if (companyId) {
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        query = {
+          $or: [
+            { companyId: new mongoose.Types.ObjectId(companyId) },
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { companyId: String(companyId) },
+            { companyId: { $exists: false } },
+            { companyId: null }
+          ]
+        };
+      }
+    }
+
+    const financialYears = await financialYearModel.find(query);
     if (!financialYears || financialYears.length === 0) {
       return res
-        .status(404)
-        .json({ status: "false", message: "No Financial Year found" });
+        .status(200)
+        .json({ status: "true", data: [] });
     }
     // sort data from newest to oldest
     financialYears.sort((a, b) => new Date(b.fromDate) - new Date(a.fromDate));

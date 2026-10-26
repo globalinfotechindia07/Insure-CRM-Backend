@@ -36,7 +36,7 @@ const leadSchema = new mongoose.Schema(
     Prospect: { type: mongoose.Schema.Types.ObjectId, ref: "branchSettings" },
     Client: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "AdminclientRegistration",
+      ref: "branchSettings",
     },
     newCompanyName: { type: String, default: "" },
     companyName: { type: String, default: "" },
