@@ -260,7 +260,7 @@ const getPolicyDetail = async (req, res) => {
     if (req.query.isIrdai === 'true') {
       baseQuery.select("financialYear startDate tpStartDate odStartDate endorStartDate transactionDate insDepartment totalAmount totalBrokerageAmountincGst cutomerName retailCustomer customerGroup insurerName");
     } else if (req.query.isParametric === 'true') {
-      baseQuery.select("cutomerName retailCustomer customerGroup email mobile policyNumber startDate endDate netPremium totalAmount vehicleNumber insDepartment insCompany gstAmount totalBrokerageGst totalBrokerageAmountincGst financialYear pos bqp");
+      baseQuery.select("cutomerName retailCustomer customerGroup email mobile policyNumber startDate endDate tpStartDate odStartDate endorStartDate transactionDate renewalDate tpEndDate odEndDate endorEndDate netPremium totalAmount vehicleNumber insDepartment insCompany gstAmount totalBrokerageGst totalBrokerageAmount totalBrokerageAmountincGst amountOnOtherTerr amountOnTerr odBrokerageAmount tpBrokerageAmount financialYear pos bqp");
     } else {
       baseQuery.populate("gst")
                .populate("tpGst")
@@ -303,6 +303,16 @@ const getPolicyDetail = async (req, res) => {
         if (!polObj.renewalDate) polObj.renewalDate = effectiveEndDate;
         if (!polObj.endDate) polObj.endDate = effectiveEndDate;
       }
+            // Compute accurate Total Brokerage = tpBrokerageAmount + odBrokerageAmount + amountOnOtherTerr + amountOnTerr
+      const compTerr = Number(polObj.amountOnTerr) || 0;
+      const compOtherTerr = Number(polObj.amountOnOtherTerr) || 0;
+      const compOd = Number(polObj.odBrokerageAmount) || 0;
+      const compTp = Number(polObj.tpBrokerageAmount) || 0;
+      const compSum = compTp + compOd + compOtherTerr + compTerr;
+      const finalBrok = compSum > 0 ? Math.round(compSum * 100) / 100 : (Number(polObj.totalBrokerageAmount) || 0);
+      polObj.totalBrokerageAmount = finalBrok;
+      const gstRate = Number(polObj.totalBrokerageGst) || 18;
+      polObj.totalBrokerageAmountincGst = Math.round((finalBrok * (1 + gstRate / 100)) * 100) / 100;
       uniquePolicies.push(polObj);
     }
 
@@ -768,6 +778,16 @@ const postPolicyDetail = async (req, res) => {
     const effectiveRenewalDate = renewalDate || endDate || odEndDate || tpEndDate || undefined;
     const effectiveEndDate = endDate || renewalDate || odEndDate || tpEndDate || undefined;
 
+    // Compute accurate Total Brokerage = tpBrokerageAmount + odBrokerageAmount + amountOnOtherTerr + amountOnTerr
+    const compTp = Number(tpBrokerageAmount) || 0;
+    const compOd = Number(odBrokerageAmount) || 0;
+    const compOtherTerr = Number(amountOnOtherTerr) || 0;
+    const compTerr = Number(amountOnTerr) || 0;
+    const compSum = compTp + compOd + compOtherTerr + compTerr;
+    const finalTotalBrokerage = compSum > 0 ? Math.round(compSum * 100) / 100 : (Number(totalBrokerageAmount) || 0);
+    const finalBrokerageGst = Number(totalBrokerageGst) || 18;
+    const finalTotalBrokerageIncGst = Math.round((finalTotalBrokerage * (1 + finalBrokerageGst / 100)) * 100) / 100;
+
     // 📝 Create new AdminClientRegistration document
     const newPolicyDetail = new policyDetailModel({
       financialYear: req.body.financialYear || undefined,
@@ -870,9 +890,9 @@ const postPolicyDetail = async (req, res) => {
       odBrokerageAmount,
       tpBrokerageRate: req.body.tpBrokerageRate || undefined,
       tpBrokerageAmount,
-      totalBrokerageAmount,
-      totalBrokerageGst,
-      totalBrokerageAmountincGst,
+      totalBrokerageAmount: finalTotalBrokerage,
+      totalBrokerageGst: finalBrokerageGst,
+      totalBrokerageAmountincGst: finalTotalBrokerageIncGst,
       sharePercentage: req.body.sharePercentage || undefined,
       coBrokerageAmount: req.body.coBrokerageAmount || undefined,
       companyId: cleanCompanyId,
@@ -1012,22 +1032,26 @@ const getPolicyDetailById = async (req, res) => {
       modified = true;
     }
 
-    // Self-repair brokerage totals if missing
+    // Self-repair brokerage totals if missing or incorrect
     if (!policyObj.totalBrokerageGst) {
       policyObj.totalBrokerageGst = 18;
       updateFields.totalBrokerageGst = 18;
       modified = true;
     }
-    if ((!policyObj.totalBrokerageAmount || policyObj.totalBrokerageAmount === 0) && (policyObj.odBrokerageAmount || policyObj.tpBrokerageAmount)) {
-      const tot = (policyObj.odBrokerageAmount || 0) + (policyObj.tpBrokerageAmount || 0);
+    const terrPart = (Number(policyObj.amountOnOtherTerr) || 0) + (Number(policyObj.amountOnTerr) || 0);
+    const motorPart = (Number(policyObj.odBrokerageAmount) || 0) + (Number(policyObj.tpBrokerageAmount) || 0);
+    const calcTotal = Math.round((terrPart + motorPart) * 100) / 100;
+    if (calcTotal > 0 && (!policyObj.totalBrokerageAmount || policyObj.totalBrokerageAmount === 0 || policyObj.totalBrokerageAmount !== calcTotal)) {
+      const tot = calcTotal;
       policyObj.totalBrokerageAmount = tot;
       updateFields.totalBrokerageAmount = tot;
       modified = true;
     }
-    if ((!policyObj.totalBrokerageAmountincGst || policyObj.totalBrokerageAmountincGst === 0) && policyObj.totalBrokerageAmount) {
-      const totInc = Math.round((policyObj.totalBrokerageAmount * (1 + ((policyObj.totalBrokerageGst || 18) / 100))) * 100) / 100;
-      policyObj.totalBrokerageAmountincGst = totInc;
-      updateFields.totalBrokerageAmountincGst = totInc;
+    const targetGst = Number(policyObj.totalBrokerageGst) || 18;
+    const expectedIncGst = policyObj.totalBrokerageAmount ? Math.round((policyObj.totalBrokerageAmount * (1 + targetGst / 100)) * 100) / 100 : 0;
+    if (expectedIncGst > 0 && (!policyObj.totalBrokerageAmountincGst || policyObj.totalBrokerageAmountincGst === 0 || policyObj.totalBrokerageAmountincGst !== expectedIncGst)) {
+      policyObj.totalBrokerageAmountincGst = expectedIncGst;
+      updateFields.totalBrokerageAmountincGst = expectedIncGst;
       modified = true;
     }
 
@@ -1101,6 +1125,19 @@ const updatePolicyDetail = async (req, res) => {
     const effectiveEndDate = updateData.endDate || updateData.renewalDate || updateData.odEndDate || updateData.tpEndDate;
     if (effectiveRenewalDate) updateData.renewalDate = effectiveRenewalDate;
     if (effectiveEndDate) updateData.endDate = effectiveEndDate;
+
+    // Compute accurate Total Brokerage = tpBrokerageAmount + odBrokerageAmount + amountOnOtherTerr + amountOnTerr
+    const compTp = Number(updateData.tpBrokerageAmount !== undefined ? updateData.tpBrokerageAmount : existingPolicy.tpBrokerageAmount) || 0;
+    const compOd = Number(updateData.odBrokerageAmount !== undefined ? updateData.odBrokerageAmount : existingPolicy.odBrokerageAmount) || 0;
+    const compOtherTerr = Number(updateData.amountOnOtherTerr !== undefined ? updateData.amountOnOtherTerr : existingPolicy.amountOnOtherTerr) || 0;
+    const compTerr = Number(updateData.amountOnTerr !== undefined ? updateData.amountOnTerr : existingPolicy.amountOnTerr) || 0;
+    const compSum = compTp + compOd + compOtherTerr + compTerr;
+    if (compSum > 0) {
+      updateData.totalBrokerageAmount = Math.round(compSum * 100) / 100;
+      const gstRate = Number(updateData.totalBrokerageGst !== undefined ? updateData.totalBrokerageGst : (existingPolicy.totalBrokerageGst || 18)) || 18;
+      updateData.totalBrokerageGst = gstRate;
+      updateData.totalBrokerageAmountincGst = Math.round((updateData.totalBrokerageAmount * (1 + gstRate / 100)) * 100) / 100;
+    }
 
     // 🔍 Duplicate Policy Check on update
     if (updateData.policyNumber && String(updateData.policyNumber).trim() !== "") {
@@ -2313,8 +2350,11 @@ const importCsv = async (req, res) => {
       }
 
       let totalBrokerageAmount = Number(getValueByPossibleKeys(row, "TOTAL BROKERAGE AMOUNT", "BROKERAGE AMOUNT", "BROKERAGE", "COMMISSION", "TOTAL BROKERAGE", "COMMISSION AMOUNT", "TOTAL COMMISSION", "BROKERAGE (RS)", "COMMISSION (RS)"));
-      if (isNaN(totalBrokerageAmount) || totalBrokerageAmount === 0) {
-        if (odBrokerageAmount || tpBrokerageAmount) {
+      const sumBrokerageComponents = (amountOnOtherTerr || 0) + (amountOnTerr || 0) + (odBrokerageAmount || 0) + (tpBrokerageAmount || 0);
+      if (isNaN(totalBrokerageAmount) || totalBrokerageAmount === 0 || (sumBrokerageComponents > 0 && sumBrokerageComponents !== totalBrokerageAmount)) {
+        if (sumBrokerageComponents > 0) {
+          totalBrokerageAmount = sumBrokerageComponents;
+        } else if (odBrokerageAmount || tpBrokerageAmount) {
           totalBrokerageAmount = (odBrokerageAmount || 0) + (tpBrokerageAmount || 0);
         } else if (netPremium > 0 && odRateNum > 0) {
           totalBrokerageAmount = Math.round(((netPremium * odRateNum) / 100) * 100) / 100;
@@ -2626,8 +2666,20 @@ const exportCsv = async (req, res) => {
     const exportData = policyData.map((p) => {
       const obj = JSON.parse(JSON.stringify(p));
 
+      const compTp = Number(obj.tpBrokerageAmount) || 0;
+      const compOd = Number(obj.odBrokerageAmount) || 0;
+      const compOtherTerr = Number(obj.amountOnOtherTerr) || 0;
+      const compTerr = Number(obj.amountOnTerr) || 0;
+      const compSum = compTp + compOd + compOtherTerr + compTerr;
+      const calcTotalBrok = compSum > 0 ? Math.round(compSum * 100) / 100 : (Number(obj.totalBrokerageAmount) || 0);
+      const gstRate = Number(obj.totalBrokerageGst) || 18;
+      const calcTotalBrokIncGst = Math.round((calcTotalBrok * (1 + gstRate / 100)) * 100) / 100;
+
       return {
         ...obj,
+        totalBrokerageAmount: calcTotalBrok,
+        totalBrokerageGst: gstRate,
+        totalBrokerageAmountincGst: calcTotalBrokIncGst,
         insDepartment: obj.insDepartment?.insDepartment || "",
         insCompany: obj.insCompany?.insCompany || obj.insCompany?.name || "",
         brokerName: obj.brokerName?.brokerName || "",
@@ -2811,6 +2863,21 @@ const exportCsv = async (req, res) => {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Format all numeric cells with 2 decimal places so Excel displays exact values and sums
+    if (ws["!ref"]) {
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[cellRef];
+          if (cell && typeof cell.v === "number") {
+            cell.z = "0.00";
+          }
+        }
+      }
+    }
+
     XLSX.utils.book_append_sheet(wb, ws, "Policies");
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 

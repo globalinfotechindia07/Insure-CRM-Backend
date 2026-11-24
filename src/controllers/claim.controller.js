@@ -14,7 +14,9 @@ const populateAll = (query) => {
       populate: [
         { path: "retailCustomer" },
         { path: "customerGroup" },
-        { path: "insDepartment" }
+        { path: "insDepartment" },
+        { path: "insCompany" },
+        { path: "financialYear" }
       ]
     })
     .populate("preliminarySurveyorId")  // ✅ Preliminary Surveyor
